@@ -40,6 +40,7 @@ import type {
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { api, ApiError } from '../lib/api';
 import { currencyFormat, numberFormat } from '../lib/format';
+import { getStockLevel } from '../lib/stock-level';
 
 interface CartLine {
   product: PosCatalogItem;
@@ -299,7 +300,8 @@ export function PosPage(): React.JSX.Element {
             {visibleProducts.map((product) => {
               const outOfStock = product.stockQuantity <= 0;
               const lowStock =
-                product.stockQuantity > 0 && product.stockQuantity <= product.reorderPoint;
+                !outOfStock &&
+                getStockLevel(product.stockTotal, product.reorderPoint) !== 'IN_STOCK';
               return (
                 <Col xs={24} sm={12} xl={8} xxl={6} key={product.id}>
                   <Card
@@ -309,11 +311,11 @@ export function PosPage(): React.JSX.Element {
                   >
                     <div className="product-visual">
                       <ShoppingCartOutlined />
-                      <Tag color={outOfStock ? 'default' : lowStock ? 'red' : 'green'}>
+                      <Tag color={outOfStock ? 'red' : lowStock ? 'orange' : 'green'}>
                         {outOfStock
                           ? 'Hết hàng'
                           : lowStock
-                            ? `Sắp hết: ${numberFormat.format(product.stockQuantity)}`
+                            ? `Tổng tồn thấp: ${numberFormat.format(product.stockTotal)}`
                             : `Còn: ${numberFormat.format(product.stockQuantity)}`}
                       </Tag>
                     </div>

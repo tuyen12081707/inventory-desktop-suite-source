@@ -1,0 +1,2 @@
+ALTER TABLE "Company"
+ALTER COLUMN "logoKey" TYPE TEXT;

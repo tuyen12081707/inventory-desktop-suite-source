@@ -51,7 +51,7 @@ export function DashboardPage(): React.JSX.Element {
       icon: <DollarOutlined />,
     },
     {
-      title: 'Sản phẩm sắp hết',
+      title: 'Sản phẩm cần nhập',
       value: numberFormat.format(data.lowStockProducts),
       icon: <AlertOutlined />,
       warning: data.lowStockProducts > 0,

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { ReportOverview } from '@inventory/contracts';
+import { getStockLevel } from '../inventory/domain/stock-level';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 interface ReportFilter {
@@ -20,7 +21,7 @@ export class ReportsService {
       });
       if (!exists) throw new BadRequestException('Kho lọc báo cáo không hợp lệ');
     }
-    const [company, sales, balances] = await this.prisma.$transaction([
+    const [company, sales, balances, activeProducts, stockTotals] = await this.prisma.$transaction([
       this.prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { name: true } }),
       this.prisma.sale.findMany({
         where: {
@@ -38,9 +39,20 @@ export class ReportsService {
       this.prisma.stockBalance.findMany({
         where: {
           warehouse: { companyId },
+          product: { active: true },
           ...(filter.warehouseId ? { warehouseId: filter.warehouseId } : {}),
         },
         include: { product: true },
+      }),
+      this.prisma.product.findMany({
+        where: { companyId, active: true },
+        select: { id: true, sku: true, name: true, unit: true, reorderPoint: true },
+      }),
+      this.prisma.stockBalance.groupBy({
+        by: ['productId'],
+        where: { warehouse: { companyId }, product: { active: true } },
+        orderBy: { productId: 'asc' },
+        _sum: { quantity: true },
       }),
     ]);
     let revenue = 0;
@@ -83,20 +95,18 @@ export class ReportsService {
         byProduct.set(line.productId, product);
       }
     }
-    const totalsByProduct = new Map<string, number>();
+    const totalsByProduct = new Map(activeProducts.map((product) => [product.id, 0]));
     let inventoryValue = 0;
-    for (const balance of balances) {
-      const quantity = Number(balance.quantity);
-      totalsByProduct.set(
-        balance.productId,
-        (totalsByProduct.get(balance.productId) ?? 0) + quantity,
-      );
-      inventoryValue += quantity * Number(balance.averageCost);
+    for (const total of stockTotals) {
+      totalsByProduct.set(total.productId, Number(total._sum?.quantity ?? 0));
     }
-    const products = new Map(balances.map((balance) => [balance.productId, balance.product]));
+    for (const balance of balances) {
+      inventoryValue += Number(balance.quantity) * Number(balance.averageCost);
+    }
+    const products = new Map(activeProducts.map((product) => [product.id, product]));
     const lowStock = [...totalsByProduct.entries()].flatMap(([productId, quantity]) => {
       const product = products.get(productId);
-      return product && quantity <= product.reorderPoint
+      return product && getStockLevel(quantity, product.reorderPoint) !== 'IN_STOCK'
         ? [
             {
               productId,

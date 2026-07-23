@@ -4,12 +4,15 @@ import {
   App,
   Button,
   Card,
+  Empty,
   Form,
   Input,
   InputNumber,
   Modal,
+  Pagination,
   Popconfirm,
   Select,
+  Skeleton,
   Space,
   Table,
   Tag,
@@ -25,7 +28,7 @@ import type {
   WarehouseSummary,
 } from '@inventory/contracts';
 import { api, ApiError } from '../lib/api';
-import { dateTimeFormat } from '../lib/format';
+import { dateTimeFormat, numberFormat } from '../lib/format';
 
 const typeLabels: Record<DocumentType, string> = {
   RECEIPT: 'Nhập kho',
@@ -50,6 +53,8 @@ const statusColors: Record<DocumentStatus, string> = {
   CANCELLED: 'red',
 };
 
+const PAGE_SIZE = 25;
+
 interface DocumentFormValues {
   type: DocumentType;
   warehouseId: string;
@@ -67,6 +72,7 @@ export function DocumentsPage(): React.JSX.Element {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const [form] = Form.useForm<DocumentFormValues>();
   const documentType = Form.useWatch('type', form);
 
@@ -136,6 +142,36 @@ export function DocumentsPage(): React.JSX.Element {
     value: product.id,
     label: `${product.sku} — ${product.name}`,
   }));
+  const documentData = documents.data ?? [];
+  const mobilePageData = documentData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const renderDocumentActions = (document: StockDocumentSummary): React.JSX.Element | null => {
+    if (document.status === 'DRAFT') {
+      return (
+        <Popconfirm
+          title="Duyệt phiếu này?"
+          description="Sau khi duyệt, phiếu sẵn sàng để ghi sổ."
+          onConfirm={() => approveDocument.mutate(document.id)}
+        >
+          <Button icon={<CheckOutlined />}>Duyệt phiếu</Button>
+        </Popconfirm>
+      );
+    }
+    if (document.status === 'APPROVED') {
+      return (
+        <Popconfirm
+          title="Ghi sổ tồn kho?"
+          description="Thao tác này cập nhật tồn và không thể sửa trực tiếp."
+          onConfirm={() => postDocument.mutate(document.id)}
+        >
+          <Button type="primary" icon={<SendOutlined />}>
+            Ghi sổ
+          </Button>
+        </Popconfirm>
+      );
+    }
+    return null;
+  };
 
   return (
     <Space direction="vertical" size="large" className="page-stack">
@@ -150,78 +186,130 @@ export function DocumentsPage(): React.JSX.Element {
           Tạo phiếu
         </Button>
       </div>
-      <Card>
-        <Table
-          rowKey="id"
-          loading={documents.isLoading}
-          dataSource={documents.data}
-          scroll={{ x: 1100 }}
-          pagination={{ pageSize: 25 }}
-          columns={[
-            { title: 'Số phiếu', dataIndex: 'number', width: 210, fixed: 'left' },
-            {
-              title: 'Loại',
-              dataIndex: 'type',
-              width: 120,
-              render: (type: DocumentType) => typeLabels[type],
-            },
-            { title: 'Kho nguồn', dataIndex: 'warehouseName', width: 180 },
-            {
-              title: 'Kho đích',
-              dataIndex: 'destinationWarehouseName',
-              width: 180,
-              render: (value?: string) => value ?? '—',
-            },
-            {
-              title: 'Trạng thái',
-              dataIndex: 'status',
-              width: 120,
-              render: (status: DocumentStatus) => (
-                <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>
-              ),
-            },
-            { title: 'Số dòng', dataIndex: 'lineCount', align: 'right', width: 90 },
-            { title: 'Người tạo', dataIndex: 'createdByName', width: 170 },
-            {
-              title: 'Ngày tạo',
-              dataIndex: 'createdAt',
-              width: 160,
-              render: (value: string) => dateTimeFormat.format(new Date(value)),
-            },
-            {
-              title: 'Thao tác',
-              key: 'actions',
-              fixed: 'right',
-              width: 210,
-              render: (_value: unknown, row: StockDocumentSummary) => (
-                <Space>
-                  {row.status === 'DRAFT' && (
-                    <Popconfirm
-                      title="Duyệt phiếu này?"
-                      description="Sau khi duyệt, phiếu sẵn sàng để ghi sổ."
-                      onConfirm={() => approveDocument.mutate(row.id)}
-                    >
-                      <Button size="small" icon={<CheckOutlined />}>
-                        Duyệt
-                      </Button>
-                    </Popconfirm>
+      <Card className="documents-panel">
+        <div className="documents-desktop-table">
+          <Table
+            rowKey="id"
+            loading={documents.isLoading}
+            dataSource={documentData}
+            scroll={{ x: 1100 }}
+            pagination={{ pageSize: PAGE_SIZE }}
+            columns={[
+              { title: 'Số phiếu', dataIndex: 'number', width: 210, fixed: 'left' },
+              {
+                title: 'Loại',
+                dataIndex: 'type',
+                width: 120,
+                render: (type: DocumentType) => typeLabels[type],
+              },
+              { title: 'Kho nguồn', dataIndex: 'warehouseName', width: 180 },
+              {
+                title: 'Kho đích',
+                dataIndex: 'destinationWarehouseName',
+                width: 180,
+                render: (value?: string) => value ?? '—',
+              },
+              {
+                title: 'Trạng thái',
+                dataIndex: 'status',
+                width: 120,
+                render: (status: DocumentStatus) => (
+                  <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>
+                ),
+              },
+              { title: 'Số dòng', dataIndex: 'lineCount', align: 'right', width: 90 },
+              { title: 'Người tạo', dataIndex: 'createdByName', width: 170 },
+              {
+                title: 'Ngày tạo',
+                dataIndex: 'createdAt',
+                width: 160,
+                render: (value: string) => dateTimeFormat.format(new Date(value)),
+              },
+              {
+                title: 'Thao tác',
+                key: 'actions',
+                fixed: 'right',
+                width: 170,
+                render: (_value: unknown, row: StockDocumentSummary) => renderDocumentActions(row),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="documents-mobile-list">
+          {documents.isLoading ? (
+            <div className="mobile-list-loading">
+              <Skeleton active paragraph={{ rows: 3 }} />
+              <Skeleton active paragraph={{ rows: 3 }} />
+            </div>
+          ) : documents.isError ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không thể tải phiếu kho" />
+          ) : mobilePageData.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có phiếu kho" />
+          ) : (
+            mobilePageData.map((document) => (
+              <article className="mobile-document-card" key={document.id}>
+                <div className="mobile-list-card-header">
+                  <div>
+                    <Typography.Text strong className="mobile-list-card-title">
+                      {document.number}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" className="mobile-list-card-code">
+                      {typeLabels[document.type]}
+                    </Typography.Text>
+                  </div>
+                  <Tag color={statusColors[document.status]}>{statusLabels[document.status]}</Tag>
+                </div>
+
+                <div className="mobile-document-route">
+                  <div>
+                    <span>Kho nguồn</span>
+                    <strong>{document.warehouseName}</strong>
+                  </div>
+                  {document.destinationWarehouseName && (
+                    <div>
+                      <span>Kho đích</span>
+                      <strong>{document.destinationWarehouseName}</strong>
+                    </div>
                   )}
-                  {row.status === 'APPROVED' && (
-                    <Popconfirm
-                      title="Ghi sổ tồn kho?"
-                      description="Thao tác này cập nhật tồn và không thể sửa trực tiếp."
-                      onConfirm={() => postDocument.mutate(row.id)}
-                    >
-                      <Button size="small" type="primary" icon={<SendOutlined />}>
-                        Ghi sổ
-                      </Button>
-                    </Popconfirm>
-                  )}
-                </Space>
-              ),
-            },
-          ]}
-        />
+                </div>
+
+                <div className="mobile-list-metrics">
+                  <div>
+                    <span>Số dòng hàng</span>
+                    <strong>{numberFormat.format(document.lineCount)}</strong>
+                  </div>
+                  <div>
+                    <span>Ngày tạo</span>
+                    <strong>{dateTimeFormat.format(new Date(document.createdAt))}</strong>
+                  </div>
+                </div>
+
+                <div className="mobile-list-meta">
+                  <span>
+                    Người tạo: <strong>{document.createdByName}</strong>
+                  </span>
+                </div>
+
+                {renderDocumentActions(document) && (
+                  <div className="mobile-document-actions">{renderDocumentActions(document)}</div>
+                )}
+              </article>
+            ))
+          )}
+
+          {documentData.length > PAGE_SIZE && (
+            <Pagination
+              simple
+              current={page}
+              pageSize={PAGE_SIZE}
+              total={documentData.length}
+              showSizeChanger={false}
+              onChange={setPage}
+              className="mobile-list-pagination"
+            />
+          )}
+        </div>
       </Card>
 
       <Modal

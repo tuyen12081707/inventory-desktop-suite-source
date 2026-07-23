@@ -36,7 +36,22 @@ export const ChangePasswordSchema = z
 
 export const CompanySettingsSchema = z.object({
   name: z.string().trim().min(2).max(255),
-  logoKey: z.string().trim().url().max(500).optional().or(z.literal('')),
+  logoKey: z
+    .string()
+    .trim()
+    .max(85_000, 'Ảnh logo quá lớn')
+    .refine((value) => {
+      if (!value) return true;
+      if (/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(value)) return true;
+      try {
+        const url = new URL(value);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, 'Logo phải là URL HTTP(S) hoặc ảnh JPG, PNG, WebP đã tải lên')
+    .optional()
+    .or(z.literal('')),
   address: z.string().trim().max(500).optional(),
   phone: z.string().trim().max(32).optional(),
   email: z.string().trim().email().max(255).optional().or(z.literal('')),
@@ -249,6 +264,7 @@ export interface PosCatalogItem {
   category: string;
   salePrice: number;
   stockQuantity: number;
+  stockTotal: number;
   reorderPoint: number;
 }
 

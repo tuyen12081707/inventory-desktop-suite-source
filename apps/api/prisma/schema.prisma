@@ -55,7 +55,7 @@ model Company {
   id         String           @id @default(uuid()) @db.Uuid
   code       String           @unique @db.VarChar(32)
   name       String           @db.VarChar(255)
-  logoKey    String?          @db.VarChar(500)
+  logoKey    String?          @db.Text
   address    String?          @db.VarChar(500)
   phone      String?          @db.VarChar(32)
   email      String?          @db.VarChar(255)

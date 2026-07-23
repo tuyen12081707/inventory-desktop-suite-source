@@ -150,6 +150,11 @@ body {
   display: none;
 }
 
+.inventory-mobile-list,
+.documents-mobile-list {
+  display: none;
+}
+
 .stat-card {
   display: flex;
   align-items: center;
@@ -577,6 +582,30 @@ body {
 
 .password-form {
   max-width: 480px;
+}
+
+.settings-logo-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-logo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-field-help {
+  display: block;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.settings-logo-preview {
+  object-fit: contain;
+  border: 1px solid #e4e9f0;
+  border-radius: 10px;
+  background: #fff;
 }
 
 .report-filter .ant-card-body {
@@ -1038,6 +1067,167 @@ body {
   .mobile-product-pagination {
     justify-self: center;
     margin-top: 4px;
+  }
+
+  .inventory-panel .ant-card-body,
+  .documents-panel .ant-card-body {
+    padding: 12px;
+  }
+
+  .inventory-desktop-table,
+  .documents-desktop-table {
+    display: none;
+  }
+
+  .inventory-mobile-list,
+  .documents-mobile-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-inventory-card,
+  .mobile-document-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #e4e9f0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(16, 35, 61, 0.04);
+  }
+
+  .mobile-list-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-list-card-header > div:first-child {
+    min-width: 0;
+  }
+
+  .mobile-list-card-header > .ant-tag {
+    flex: 0 0 auto;
+    margin-inline-end: 0;
+  }
+
+  .mobile-list-card-title,
+  .mobile-list-card-code {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-list-card-title {
+    color: #10233d;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .mobile-list-card-code {
+    margin-top: 2px;
+    font-size: 12px;
+  }
+
+  .mobile-warehouse-name {
+    margin-top: 10px;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .mobile-list-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .mobile-list-metrics > div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 9px;
+    background: #f6f8fb;
+  }
+
+  .mobile-list-metrics span,
+  .mobile-list-meta span,
+  .mobile-document-route span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+  }
+
+  .mobile-list-metrics strong {
+    display: block;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: #10233d;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .mobile-list-meta {
+    display: grid;
+    gap: 5px;
+    margin-top: 12px;
+  }
+
+  .mobile-list-meta strong {
+    color: #344054;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-document-route {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 9px;
+    background: #f8fafc;
+  }
+
+  .mobile-document-route strong {
+    display: block;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+    color: #10233d;
+    font-size: 13px;
+  }
+
+  .mobile-document-actions {
+    margin-top: 12px;
+  }
+
+  .mobile-document-actions .ant-btn {
+    width: 100%;
+  }
+
+  .mobile-list-loading {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-list-loading .ant-skeleton {
+    padding: 14px;
+    border: 1px solid #e4e9f0;
+    border-radius: 12px;
+  }
+
+  .mobile-list-pagination {
+    justify-self: center;
+    margin-top: 4px;
+  }
+
+  .settings-logo-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settings-logo-buttons .ant-upload-wrapper,
+  .settings-logo-buttons .ant-upload-select,
+  .settings-logo-buttons .ant-btn {
+    width: 100%;
   }
 
   .app-header .ant-space {
