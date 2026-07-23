@@ -8,6 +8,7 @@ import type { DashboardSummary, DocumentType, StockDocumentSummary } from '@inve
 import { Prisma, type StockDocument } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { getStockLevel } from './domain/stock-level';
 import { movementDeltas } from './domain/stock-policy';
 
 interface DocumentCreateInput {
@@ -36,6 +37,7 @@ export interface StockRow {
   averageCost: number;
   value: number;
   reorderPoint: number;
+  productStockTotal: number;
 }
 
 @Injectable()
@@ -49,7 +51,7 @@ export class InventoryService {
         select: { id: true, reorderPoint: true },
       }),
       this.prisma.stockBalance.findMany({
-        where: { warehouse: { companyId } },
+        where: { warehouse: { companyId }, product: { active: true } },
         include: { product: true },
       }),
       this.prisma.stockDocument.count({ where: { companyId, status: 'DRAFT' } }),
@@ -78,7 +80,9 @@ export class InventoryService {
     }
     let lowStockProducts = 0;
     for (const [productId, quantity] of totalsByProduct) {
-      if (quantity <= (reorderPoints.get(productId) ?? 0)) lowStockProducts += 1;
+      if (getStockLevel(quantity, reorderPoints.get(productId) ?? 0) !== 'IN_STOCK') {
+        lowStockProducts += 1;
+      }
     }
 
     return {
@@ -99,14 +103,26 @@ export class InventoryService {
   }
 
   async stock(companyId: string, warehouseId?: string): Promise<StockRow[]> {
-    const balances = await this.prisma.stockBalance.findMany({
-      where: {
-        warehouse: { companyId },
-        ...(warehouseId ? { warehouseId } : {}),
-      },
-      include: { warehouse: true, product: true },
-      orderBy: [{ warehouse: { name: 'asc' } }, { product: { name: 'asc' } }],
-    });
+    const [balances, totals] = await this.prisma.$transaction([
+      this.prisma.stockBalance.findMany({
+        where: {
+          warehouse: { companyId },
+          product: { active: true },
+          ...(warehouseId ? { warehouseId } : {}),
+        },
+        include: { warehouse: true, product: true },
+        orderBy: [{ warehouse: { name: 'asc' } }, { product: { name: 'asc' } }],
+      }),
+      this.prisma.stockBalance.groupBy({
+        by: ['productId'],
+        where: { warehouse: { companyId }, product: { active: true } },
+        orderBy: { productId: 'asc' },
+        _sum: { quantity: true },
+      }),
+    ]);
+    const productTotals = new Map(
+      totals.map((total) => [total.productId, Number(total._sum?.quantity ?? 0)]),
+    );
     return balances.map((balance) => {
       const quantity = Number(balance.quantity);
       const averageCost = Number(balance.averageCost);
@@ -122,6 +138,7 @@ export class InventoryService {
         averageCost,
         value: quantity * averageCost,
         reorderPoint: Number(balance.product.reorderPoint),
+        productStockTotal: productTotals.get(balance.productId) ?? quantity,
       };
     });
   }

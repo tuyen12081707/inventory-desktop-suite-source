@@ -64,12 +64,12 @@ export class SalesService {
       },
       include: {
         barcodes: { where: { primary: true }, take: 1 },
-        balances: { where: { warehouseId }, take: 1 },
+        balances: { select: { warehouseId: true, quantity: true } },
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
       take: 200,
     });
-    return products.map((product) => this.toCatalogItem(product));
+    return products.map((product) => this.toCatalogItem(product, warehouseId));
   }
 
   async resolveProduct(
@@ -94,13 +94,13 @@ export class SalesService {
       },
       include: {
         barcodes: { where: { primary: true }, take: 1 },
-        balances: { where: { warehouseId }, take: 1 },
+        balances: { select: { warehouseId: true, quantity: true } },
       },
     });
     if (!product) {
       throw new NotFoundException(`Không tìm thấy sản phẩm với mã "${code}"`);
     }
-    return this.toCatalogItem(product);
+    return this.toCatalogItem(product, warehouseId);
   }
 
   async recent(companyId: string, warehouseId?: string): Promise<SaleReceipt[]> {
@@ -313,17 +313,23 @@ export class SalesService {
     if (!warehouse) throw new NotFoundException('Không tìm thấy kho bán hàng');
   }
 
-  private toCatalogItem(product: {
-    id: string;
-    sku: string;
-    name: string;
-    unit: string;
-    category: string;
-    salePrice: Prisma.Decimal;
-    reorderPoint: number;
-    barcodes: Array<{ code: string }>;
-    balances: Array<{ quantity: number }>;
-  }): PosCatalogItem {
+  private toCatalogItem(
+    product: {
+      id: string;
+      sku: string;
+      name: string;
+      unit: string;
+      category: string;
+      salePrice: Prisma.Decimal;
+      reorderPoint: number;
+      barcodes: Array<{ code: string }>;
+      balances: Array<{ warehouseId: string; quantity: number }>;
+    },
+    warehouseId: string,
+  ): PosCatalogItem {
+    const stockQuantity = Number(
+      product.balances.find((balance) => balance.warehouseId === warehouseId)?.quantity ?? 0,
+    );
     return {
       id: product.id,
       sku: product.sku,
@@ -332,7 +338,8 @@ export class SalesService {
       barcode: product.barcodes[0]?.code,
       category: product.category,
       salePrice: Number(product.salePrice),
-      stockQuantity: Number(product.balances[0]?.quantity ?? 0),
+      stockQuantity,
+      stockTotal: product.balances.reduce((total, balance) => total + Number(balance.quantity), 0),
       reorderPoint: Number(product.reorderPoint),
     };
   }

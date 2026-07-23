@@ -28,6 +28,7 @@ import { useState } from 'react';
 import type { PageResult, ProductSummary } from '@inventory/contracts';
 import { api, ApiError } from '../lib/api';
 import { currencyFormat, numberFormat } from '../lib/format';
+import { getStockLevel } from '../lib/stock-level';
 
 interface ProductFormValues {
   sku: string;
@@ -38,6 +39,19 @@ interface ProductFormValues {
   standardCost: number;
   salePrice: number;
   category: string;
+}
+
+function StockStatusTag({
+  quantity,
+  reorderPoint,
+}: {
+  quantity: number;
+  reorderPoint: number;
+}): React.JSX.Element | null {
+  const level = getStockLevel(quantity, reorderPoint);
+  if (level === 'OUT_OF_STOCK') return <Tag color="red">Hết hàng</Tag>;
+  if (level === 'LOW_STOCK') return <Tag color="orange">Sắp hết</Tag>;
+  return null;
 }
 
 export function ProductsPage(): React.JSX.Element {
@@ -215,7 +229,7 @@ export function ProductsPage(): React.JSX.Element {
             loading={products.isLoading}
             dataSource={productData}
             className="products-table"
-            scroll={{ x: 1050 }}
+            scroll={{ x: 1150 }}
             pagination={{
               current: page,
               pageSize: 25,
@@ -247,9 +261,17 @@ export function ProductsPage(): React.JSX.Element {
                 render: (value: number, row: ProductSummary) => (
                   <Space>
                     {numberFormat.format(value)}
-                    {value <= row.reorderPoint && <Tag color="red">Sắp hết</Tag>}
+                    <StockStatusTag quantity={value} reorderPoint={row.reorderPoint} />
                   </Space>
                 ),
+              },
+              {
+                title: 'Ngưỡng',
+                dataIndex: 'reorderPoint',
+                align: 'right',
+                width: 90,
+                responsive: ['lg'],
+                render: (value: number) => (value > 0 ? numberFormat.format(value) : 'Tắt'),
               },
               {
                 title: 'Giá vốn',
@@ -320,7 +342,10 @@ export function ProductsPage(): React.JSX.Element {
                   <Tag color={product.active ? 'green' : 'default'}>
                     {product.active ? 'Đang dùng' : 'Ngừng dùng'}
                   </Tag>
-                  {product.stockTotal <= product.reorderPoint && <Tag color="red">Sắp hết</Tag>}
+                  <StockStatusTag
+                    quantity={product.stockTotal}
+                    reorderPoint={product.reorderPoint}
+                  />
                   <Tag>{product.category}</Tag>
                 </div>
 
@@ -343,6 +368,14 @@ export function ProductsPage(): React.JSX.Element {
                   </span>
                   <span>
                     Giá vốn: <strong>{currencyFormat.format(product.standardCost)}</strong>
+                  </span>
+                  <span>
+                    Ngưỡng cảnh báo:{' '}
+                    <strong>
+                      {product.reorderPoint > 0
+                        ? `${numberFormat.format(product.reorderPoint)} ${product.unit}`
+                        : 'Đang tắt'}
+                    </strong>
                   </span>
                 </div>
               </article>
@@ -419,7 +452,12 @@ export function ProductsPage(): React.JSX.Element {
             <Input placeholder="Ví dụ: Phụ kiện, Màn hình..." />
           </Form.Item>
           <div className="form-grid">
-            <Form.Item label="Ngưỡng tồn" name="reorderPoint" rules={[{ required: true }]}>
+            <Form.Item
+              label="Ngưỡng cảnh báo"
+              name="reorderPoint"
+              rules={[{ required: true }]}
+              extra="Áp dụng riêng cho sản phẩm này trên tổng tất cả kho. Nhập 0 để chỉ cảnh báo khi hết hàng."
+            >
               <InputNumber min={0} precision={0} step={1} className="full-width" />
             </Form.Item>
             <Form.Item label="Giá vốn chuẩn" name="standardCost" rules={[{ required: true }]}>
