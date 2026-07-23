@@ -7,7 +7,13 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
 const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
-const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123456';
+const configuredAdminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+if (process.env.NODE_ENV === 'production' && !configuredAdminPassword) {
+  throw new Error('SEED_ADMIN_PASSWORD is required in production');
+}
+
+const adminPassword = configuredAdminPassword ?? 'Admin@123456';
 
 const permissionDefinitions = [
   ['products.read', 'Xem sản phẩm'],

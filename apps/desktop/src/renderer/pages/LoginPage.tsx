@@ -41,7 +41,6 @@ export function LoginPage(): React.JSX.Element {
           layout="vertical"
           initialValues={{
             email: 'admin@company.local',
-            password: 'Admin@123456',
           }}
           onFinish={(values) => void submit(values)}
         >
@@ -50,14 +49,18 @@ export function LoginPage(): React.JSX.Element {
             name="email"
             rules={[{ required: true, type: 'email', message: 'Nhập email hợp lệ' }]}
           >
-            <Input prefix={<MailOutlined />} size="large" autoFocus />
+            <Input prefix={<MailOutlined />} size="large" autoComplete="username" autoFocus />
           </Form.Item>
           <Form.Item
             label="Mật khẩu"
             name="password"
             rules={[{ required: true, min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}
           >
-            <Input.Password prefix={<LockOutlined />} size="large" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              size="large"
+              autoComplete="current-password"
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" size="large" block loading={submitting}>
             Đăng nhập
