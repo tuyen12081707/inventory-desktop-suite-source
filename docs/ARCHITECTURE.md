@@ -18,7 +18,7 @@ flowchart LR
 
     Scanner["Barcode scanner"] -->|"Keyboard HID"| React
     Camera["Camera barcode"] --> React
-    Web["GitHub Pages web app"] -->|"HTTPS / JSON"| API
+    Web["Render Static Site web app"] -->|"HTTPS / JSON"| API
     Main --> Printer["Máy in"]
     React -->|"HTTPS / JSON"| API["NestJS modular monolith"]
     API --> DB[("PostgreSQL")]

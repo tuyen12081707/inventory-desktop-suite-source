@@ -79,7 +79,7 @@ docs                Tài liệu kiến trúc và ERD
 
 Đọc [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) trước khi mở rộng nghiệp vụ tồn kho.
 Quy trình build, container và phát hành nằm tại [docs/CICD.md](docs/CICD.md).
-Hướng dẫn GitHub Pages, API và PostgreSQL cloud nằm tại
+Hướng dẫn Render Static Site, API và PostgreSQL cloud nằm tại
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 > Electron Forge hiện nên chạy bằng Node 22/24. Node 26 chưa nằm trong dải engine của dự án.
