@@ -1,6 +1,7 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  MoreOutlined,
   PlusOutlined,
   PoweroffOutlined,
   SearchOutlined,
@@ -10,11 +11,11 @@ import {
   App,
   Button,
   Card,
+  Dropdown,
   Form,
   Input,
   InputNumber,
   Modal,
-  Popconfirm,
   Space,
   Table,
   Tag,
@@ -37,7 +38,7 @@ interface ProductFormValues {
 }
 
 export function ProductsPage(): React.JSX.Element {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -126,6 +127,29 @@ export function ProductsPage(): React.JSX.Element {
     setModalOpen(true);
   };
 
+  const confirmStatusChange = (product: ProductSummary): void => {
+    modal.confirm({
+      title: product.active ? 'Ngừng sử dụng sản phẩm?' : 'Kích hoạt lại sản phẩm?',
+      content: product.active
+        ? 'Sản phẩm còn tồn kho sẽ không thể ngừng sử dụng.'
+        : 'Sản phẩm sẽ xuất hiện lại trong POS và phiếu kho.',
+      okText: product.active ? 'Ngừng sử dụng' : 'Kích hoạt',
+      cancelText: 'Hủy',
+      onOk: () => changeStatus.mutateAsync({ id: product.id, active: !product.active }),
+    });
+  };
+
+  const confirmDelete = (product: ProductSummary): void => {
+    modal.confirm({
+      title: 'Xóa vĩnh viễn sản phẩm?',
+      content: 'Chỉ xóa được sản phẩm chưa có phát sinh kho hoặc bán hàng.',
+      okText: 'Xóa sản phẩm',
+      cancelText: 'Hủy',
+      okButtonProps: { danger: true },
+      onOk: () => deleteProduct.mutateAsync(product.id),
+    });
+  };
+
   return (
     <Space direction="vertical" size="large" className="page-stack">
       <div className="page-heading">
@@ -153,7 +177,8 @@ export function ProductsPage(): React.JSX.Element {
           rowKey="id"
           loading={products.isLoading}
           dataSource={products.data?.data}
-          scroll={{ x: 1180 }}
+          className="products-table"
+          scroll={{ x: 1050 }}
           pagination={{
             current: page,
             pageSize: 25,
@@ -162,14 +187,26 @@ export function ProductsPage(): React.JSX.Element {
             onChange: setPage,
           }}
           columns={[
-            { title: 'SKU', dataIndex: 'sku', width: 130 },
-            { title: 'Tên sản phẩm', dataIndex: 'name' },
-            { title: 'Barcode', dataIndex: 'barcode', render: (value?: string) => value ?? '—' },
-            { title: 'ĐVT', dataIndex: 'unit', width: 90 },
+            { title: 'SKU', dataIndex: 'sku', width: 105, fixed: 'left' },
+            {
+              title: 'Tên sản phẩm',
+              dataIndex: 'name',
+              width: 210,
+              ellipsis: true,
+            },
+            {
+              title: 'Barcode',
+              dataIndex: 'barcode',
+              width: 150,
+              responsive: ['lg'],
+              render: (value?: string) => value ?? '—',
+            },
+            { title: 'ĐVT', dataIndex: 'unit', width: 72, responsive: ['lg'] },
             {
               title: 'Tổng tồn',
               dataIndex: 'stockTotal',
               align: 'right',
+              width: 130,
               render: (value: number, row: ProductSummary) => (
                 <Space>
                   {numberFormat.format(value)}
@@ -178,64 +215,72 @@ export function ProductsPage(): React.JSX.Element {
               ),
             },
             {
-              title: 'Thao tác',
-              key: 'actions',
-              fixed: 'right',
-              width: 240,
-              render: (_value: unknown, row: ProductSummary) => (
-                <Space size="small">
-                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
-                    Sửa
-                  </Button>
-                  <Popconfirm
-                    title={row.active ? 'Ngừng sử dụng sản phẩm?' : 'Kích hoạt lại sản phẩm?'}
-                    description={
-                      row.active
-                        ? 'Sản phẩm còn tồn kho sẽ không thể ngừng sử dụng.'
-                        : 'Sản phẩm sẽ xuất hiện lại trong POS và phiếu kho.'
-                    }
-                    onConfirm={() => changeStatus.mutate({ id: row.id, active: !row.active })}
-                  >
-                    <Button size="small" icon={<PoweroffOutlined />}>
-                      {row.active ? 'Ngừng' : 'Dùng lại'}
-                    </Button>
-                  </Popconfirm>
-                  <Popconfirm
-                    title="Xóa vĩnh viễn sản phẩm?"
-                    description="Chỉ xóa được sản phẩm chưa có phát sinh kho hoặc bán hàng."
-                    okButtonProps={{ danger: true }}
-                    onConfirm={() => deleteProduct.mutate(row.id)}
-                  >
-                    <Button
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      aria-label={`Xóa ${row.name}`}
-                    />
-                  </Popconfirm>
-                </Space>
-              ),
-            },
-            {
               title: 'Giá vốn',
               dataIndex: 'standardCost',
               align: 'right',
+              width: 130,
+              responsive: ['xl'],
               render: (value: number) => currencyFormat.format(value),
             },
             {
               title: 'Giá bán',
               dataIndex: 'salePrice',
               align: 'right',
+              width: 130,
+              responsive: ['md'],
               render: (value: number) => currencyFormat.format(value),
             },
-            { title: 'Nhóm hàng', dataIndex: 'category', width: 130 },
+            { title: 'Nhóm hàng', dataIndex: 'category', width: 120, responsive: ['lg'] },
             {
               title: 'Trạng thái',
               dataIndex: 'active',
+              width: 105,
+              responsive: ['sm'],
               render: (active: boolean) => (
                 <Tag color={active ? 'green' : 'default'}>
                   {active ? 'Đang dùng' : 'Ngừng dùng'}
                 </Tag>
+              ),
+            },
+            {
+              title: '',
+              key: 'actions',
+              fixed: 'right',
+              width: 56,
+              align: 'center',
+              render: (_value: unknown, row: ProductSummary) => (
+                <Dropdown
+                  trigger={['click']}
+                  placement="bottomRight"
+                  menu={{
+                    items: [
+                      { key: 'edit', icon: <EditOutlined />, label: 'Sửa sản phẩm' },
+                      {
+                        key: 'status',
+                        icon: <PoweroffOutlined />,
+                        label: row.active ? 'Ngừng sử dụng' : 'Kích hoạt lại',
+                      },
+                      { type: 'divider' },
+                      {
+                        key: 'delete',
+                        icon: <DeleteOutlined />,
+                        label: 'Xóa sản phẩm',
+                        danger: true,
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === 'edit') openEdit(row);
+                      if (key === 'status') confirmStatusChange(row);
+                      if (key === 'delete') confirmDelete(row);
+                    },
+                  }}
+                >
+                  <Button
+                    type="text"
+                    icon={<MoreOutlined />}
+                    aria-label={`Thao tác với ${row.name}`}
+                  />
+                </Dropdown>
               ),
             },
           ]}

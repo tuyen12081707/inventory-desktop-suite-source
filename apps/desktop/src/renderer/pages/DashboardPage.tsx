@@ -98,17 +98,20 @@ export function DashboardPage(): React.JSX.Element {
           rowKey="id"
           pagination={false}
           dataSource={data.recentDocuments}
+          scroll={{ x: 720 }}
           columns={[
-            { title: 'Số phiếu', dataIndex: 'number' },
+            { title: 'Số phiếu', dataIndex: 'number', width: 210, fixed: 'left' },
             {
               title: 'Loại',
               dataIndex: 'type',
+              width: 110,
               render: (type: DocumentType) => typeLabels[type],
             },
-            { title: 'Kho', dataIndex: 'warehouseName' },
+            { title: 'Kho', dataIndex: 'warehouseName', width: 170 },
             {
               title: 'Trạng thái',
               dataIndex: 'status',
+              width: 120,
               render: (status: DocumentStatus) => (
                 <Tag
                   color={status === 'POSTED' ? 'green' : status === 'APPROVED' ? 'blue' : 'default'}
@@ -120,6 +123,7 @@ export function DashboardPage(): React.JSX.Element {
             {
               title: 'Ngày tạo',
               dataIndex: 'createdAt',
+              width: 150,
               render: (value: string) => dateTimeFormat.format(new Date(value)),
             },
           ]}

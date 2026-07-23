@@ -59,15 +59,17 @@ export function InventoryPage(): React.JSX.Element {
           rowKey={(row) => `${row.warehouseId}-${row.productId}`}
           loading={stock.isLoading}
           dataSource={stock.data}
+          scroll={{ x: 900 }}
           pagination={{ pageSize: 25, showSizeChanger: true }}
           columns={[
-            { title: 'Kho', dataIndex: 'warehouseName' },
+            { title: 'Kho', dataIndex: 'warehouseName', width: 170, fixed: 'left' },
             { title: 'SKU', dataIndex: 'sku', width: 130 },
-            { title: 'Sản phẩm', dataIndex: 'productName' },
+            { title: 'Sản phẩm', dataIndex: 'productName', width: 210, ellipsis: true },
             {
               title: 'Tồn',
               dataIndex: 'quantity',
               align: 'right',
+              width: 150,
               render: (value: number, row: StockRow) => (
                 <Space>
                   <span>
@@ -81,12 +83,14 @@ export function InventoryPage(): React.JSX.Element {
               title: 'Giá vốn bình quân',
               dataIndex: 'averageCost',
               align: 'right',
+              width: 160,
               render: (value: number) => currencyFormat.format(value),
             },
             {
               title: 'Giá trị',
               dataIndex: 'value',
               align: 'right',
+              width: 150,
               render: (value: number) => currencyFormat.format(value),
             },
           ]}

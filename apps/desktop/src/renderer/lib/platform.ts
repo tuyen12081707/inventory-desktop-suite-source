@@ -1,11 +1,23 @@
 const browserFallback = {
   secureStore: {
     async getRefreshToken(): Promise<string | null> {
-      return sessionStorage.getItem('inventory.refreshToken');
+      const token =
+        localStorage.getItem('inventory.refreshToken') ??
+        sessionStorage.getItem('inventory.refreshToken');
+      if (token && !localStorage.getItem('inventory.refreshToken')) {
+        localStorage.setItem('inventory.refreshToken', token);
+        sessionStorage.removeItem('inventory.refreshToken');
+      }
+      return token;
     },
     async setRefreshToken(token: string | null): Promise<void> {
-      if (token) sessionStorage.setItem('inventory.refreshToken', token);
-      else sessionStorage.removeItem('inventory.refreshToken');
+      if (token) {
+        localStorage.setItem('inventory.refreshToken', token);
+        sessionStorage.removeItem('inventory.refreshToken');
+      } else {
+        localStorage.removeItem('inventory.refreshToken');
+        sessionStorage.removeItem('inventory.refreshToken');
+      }
     },
   },
   async printCurrentWindow(): Promise<{ success: boolean; reason?: string }> {
