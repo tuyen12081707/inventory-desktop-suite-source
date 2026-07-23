@@ -7,7 +7,7 @@ Monorepo ứng dụng quản lý kho desktop cho công ty:
 - PostgreSQL + Prisma
 - JWT access token, refresh rotation và RBAC
 - Stock ledger bất biến, transaction serializable và idempotency
-- Docker Compose, seed, test và CI
+- Docker Compose, seed, test và CI/CD bằng GitHub Actions
 
 ## Yêu cầu
 
@@ -45,6 +45,7 @@ npm test
 npm run build
 npm run format:check
 npm run db:migrate
+npm run db:deploy
 npm run db:seed
 npm run make -w @inventory/desktop
 ```
@@ -76,5 +77,6 @@ docs                Tài liệu kiến trúc và ERD
 ```
 
 Đọc [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) trước khi mở rộng nghiệp vụ tồn kho.
+Quy trình build, container và phát hành nằm tại [docs/CICD.md](docs/CICD.md).
 
 > Electron Forge hiện nên chạy bằng Node 22/24. Node 26 chưa nằm trong dải engine của dự án.

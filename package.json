@@ -17,6 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "npm run prisma:generate -w @inventory/api",
+    "db:deploy": "npm run prisma:deploy -w @inventory/api",
     "db:migrate": "npm run prisma:migrate -w @inventory/api",
     "db:seed": "npm run prisma:seed -w @inventory/api"
   },
