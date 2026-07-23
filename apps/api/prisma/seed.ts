@@ -8,12 +8,11 @@ config({ path: resolve(__dirname, '../../../.env') });
 const prisma = new PrismaClient();
 const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
 const configuredAdminPassword = process.env.SEED_ADMIN_PASSWORD;
+const isProduction = process.env.NODE_ENV === 'production';
 
-if (process.env.NODE_ENV === 'production' && !configuredAdminPassword) {
-  throw new Error('SEED_ADMIN_PASSWORD is required in production');
+if (configuredAdminPassword && configuredAdminPassword.length < 12) {
+  throw new Error('SEED_ADMIN_PASSWORD must contain at least 12 characters');
 }
-
-const adminPassword = configuredAdminPassword ?? 'Admin@123456';
 
 const permissionDefinitions = [
   ['products.read', 'Xem sản phẩm'],
@@ -64,21 +63,27 @@ async function main(): Promise<void> {
     skipDuplicates: true,
   });
 
-  const admin = await prisma.user.upsert({
-    where: {
-      companyId_email: {
-        companyId: company.id,
-        email: adminEmail,
-      },
-    },
-    update: {},
-    create: {
+  const adminIdentity = {
+    companyId_email: {
       companyId: company.id,
       email: adminEmail,
-      fullName: 'Quản trị hệ thống',
-      passwordHash: await hash(adminPassword, 12),
     },
-  });
+  };
+  const passwordForCreate = configuredAdminPassword ?? (isProduction ? null : 'Admin@123456');
+  const passwordHash = passwordForCreate ? await hash(passwordForCreate, 12) : null;
+
+  const admin = passwordHash
+    ? await prisma.user.upsert({
+        where: adminIdentity,
+        update: configuredAdminPassword ? { passwordHash } : {},
+        create: {
+          companyId: company.id,
+          email: adminEmail,
+          fullName: 'Quản trị hệ thống',
+          passwordHash,
+        },
+      })
+    : await prisma.user.findUniqueOrThrow({ where: adminIdentity });
 
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId: admin.id, roleId: adminRole.id } },

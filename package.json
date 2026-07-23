@@ -16,7 +16,7 @@
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "start:render": "npm run db:deploy && node apps/api/dist/main.js",
+    "start:render": "npm run db:deploy && npm run db:seed && node apps/api/dist/main.js",
     "db:generate": "npm run prisma:generate -w @inventory/api",
     "db:deploy": "npm run prisma:deploy -w @inventory/api",
     "db:migrate": "npm run prisma:migrate -w @inventory/api",

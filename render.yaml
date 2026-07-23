@@ -9,7 +9,6 @@ services:
     autoDeployTrigger: checksPass
     healthCheckPath: /api/v1/health
     dockerCommand: npm run start:render
-    initialDeployHook: npm run db:seed
     envVars:
       - key: NODE_ENV
         value: production
