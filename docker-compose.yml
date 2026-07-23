@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+    ports:
+      - '5432:5432'
+    volumes:
+      - inventory_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U inventory -d inventory']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://inventory:inventory@postgres:5432/inventory?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-development-only-secret-change-me-now}
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TOKEN_TTL_DAYS: 30
+      CORS_ORIGINS: http://localhost:5173,file://
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma &&
+      node apps/api/dist/main.js"
+    restart: unless-stopped
+
+volumes:
+  inventory_postgres_data:

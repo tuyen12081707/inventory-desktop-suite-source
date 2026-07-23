@@ -1,0 +1,28 @@
+{
+  "name": "inventory-desktop-suite",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22 <26"
+  },
+  "scripts": {
+    "build": "npm run build -w @inventory/contracts && npm run db:generate && npm run build -w @inventory/api && npm run build -w @inventory/desktop",
+    "dev": "npm run build -w @inventory/contracts && concurrently -k -n API,DESKTOP -c cyan,magenta \"npm run dev -w @inventory/api\" \"npm run dev -w @inventory/desktop\"",
+    "typecheck": "npm run build -w @inventory/contracts && npm run db:generate && npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "npm run prisma:generate -w @inventory/api",
+    "db:migrate": "npm run prisma:migrate -w @inventory/api",
+    "db:seed": "npm run prisma:seed -w @inventory/api"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.1",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

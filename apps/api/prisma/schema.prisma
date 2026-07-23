@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum DocumentType {
+  RECEIPT
+  ISSUE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum DocumentStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  REVERSED
+  CANCELLED
+}
+
+enum StocktakeStatus {
+  DRAFT
+  COUNTING
+  COMPLETED
+  POSTED
+  CANCELLED
+}
+
+model Company {
+  id             String          @id @default(uuid()) @db.Uuid
+  code           String          @unique @db.VarChar(32)
+  name           String          @db.VarChar(255)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  users          User[]
+  roles          Role[]
+  warehouses     Warehouse[]
+  products       Product[]
+  barcodes       ProductBarcode[]
+  documents      StockDocument[]
+  ledgers        StockLedger[]
+  stocktakes     Stocktake[]
+  auditLogs      AuditLog[]
+}
+
+model User {
+  id                String          @id @default(uuid()) @db.Uuid
+  companyId         String          @db.Uuid
+  email             String          @db.VarChar(255)
+  fullName          String          @db.VarChar(255)
+  passwordHash      String          @db.VarChar(255)
+  status            UserStatus      @default(ACTIVE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userRoles         UserRole[]
+  refreshTokens     RefreshToken[]
+  createdDocuments  StockDocument[] @relation("DocumentCreator")
+  approvedDocuments StockDocument[] @relation("DocumentApprover")
+  createdStocktakes Stocktake[]      @relation("StocktakeCreator")
+  auditLogs         AuditLog[]
+
+  @@unique([companyId, email])
+  @@index([companyId, status])
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Uuid
+  companyId       String           @db.Uuid
+  code            String           @db.VarChar(64)
+  name            String           @db.VarChar(128)
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, code])
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Uuid
+  code            String           @unique @db.VarChar(100)
+  description     String           @db.VarChar(255)
+  rolePermissions RolePermission[]
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique @db.VarChar(64)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Warehouse {
+  id                   String          @id @default(uuid()) @db.Uuid
+  companyId            String          @db.Uuid
+  code                 String          @db.VarChar(32)
+  name                 String          @db.VarChar(128)
+  address              String?         @db.VarChar(500)
+  active               Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  company              Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balances             StockBalance[]
+  ledgers              StockLedger[]
+  sourceDocuments      StockDocument[] @relation("SourceWarehouse")
+  destinationDocuments StockDocument[] @relation("DestinationWarehouse")
+  stocktakes           Stocktake[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+}
+
+model Product {
+  id            String              @id @default(uuid()) @db.Uuid
+  companyId     String              @db.Uuid
+  sku           String              @db.VarChar(64)
+  name          String              @db.VarChar(255)
+  unit          String              @default("cái") @db.VarChar(32)
+  reorderPoint  Decimal             @default(0) @db.Decimal(18, 3)
+  standardCost  Decimal             @default(0) @db.Decimal(18, 4)
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  barcodes      ProductBarcode[]
+  balances      StockBalance[]
+  documentLines StockDocumentLine[]
+  ledgers       StockLedger[]
+  stocktakeLines StocktakeLine[]
+
+  @@unique([companyId, sku])
+  @@index([companyId, name])
+}
+
+model ProductBarcode {
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @db.Uuid
+  productId String  @db.Uuid
+  code      String  @db.VarChar(64)
+  primary   Boolean @default(false)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@index([productId])
+}
+
+model StockBalance {
+  id          String    @id @default(uuid()) @db.Uuid
+  warehouseId String    @db.Uuid
+  productId   String    @db.Uuid
+  quantity    Decimal   @default(0) @db.Decimal(18, 3)
+  averageCost Decimal   @default(0) @db.Decimal(18, 4)
+  version     Int       @default(0)
+  updatedAt   DateTime  @updatedAt
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, productId])
+  @@index([productId])
+}
+
+model StockDocument {
+  id                     String              @id @default(uuid()) @db.Uuid
+  companyId              String              @db.Uuid
+  number                 String              @db.VarChar(40)
+  type                   DocumentType
+  status                 DocumentStatus      @default(DRAFT)
+  warehouseId            String              @db.Uuid
+  destinationWarehouseId String?             @db.Uuid
+  reference              String?             @db.VarChar(100)
+  note                   String?             @db.VarChar(1000)
+  idempotencyKey         String              @db.Uuid
+  createdById            String              @db.Uuid
+  approvedById           String?             @db.Uuid
+  approvedAt             DateTime?
+  postedAt               DateTime?
+  reversedAt             DateTime?
+  version                Int                 @default(0)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  company                Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  warehouse              Warehouse           @relation("SourceWarehouse", fields: [warehouseId], references: [id], onDelete: Restrict)
+  destinationWarehouse   Warehouse?          @relation("DestinationWarehouse", fields: [destinationWarehouseId], references: [id], onDelete: Restrict)
+  createdBy              User                @relation("DocumentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy             User?               @relation("DocumentApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  lines                  StockDocumentLine[]
+  ledgers                StockLedger[]
+
+  @@unique([companyId, number])
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, status, createdAt])
+  @@index([warehouseId, createdAt])
+}
+
+model StockDocumentLine {
+  id         String         @id @default(uuid()) @db.Uuid
+  documentId String         @db.Uuid
+  productId  String         @db.Uuid
+  quantity   Decimal        @db.Decimal(18, 3)
+  unitCost   Decimal        @default(0) @db.Decimal(18, 4)
+  document   StockDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  product    Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  ledgers    StockLedger[]
+
+  @@unique([documentId, productId])
+  @@index([productId])
+}
+
+model StockLedger {
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @db.Uuid
+  documentId     String            @db.Uuid
+  documentLineId String            @db.Uuid
+  warehouseId    String            @db.Uuid
+  productId      String            @db.Uuid
+  quantityDelta  Decimal           @db.Decimal(18, 3)
+  unitCost       Decimal           @default(0) @db.Decimal(18, 4)
+  balanceAfter   Decimal           @db.Decimal(18, 3)
+  occurredAt     DateTime          @default(now())
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  document       StockDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentLine   StockDocumentLine @relation(fields: [documentLineId], references: [id], onDelete: Restrict)
+  warehouse      Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  product        Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, productId, occurredAt])
+  @@index([warehouseId, productId, occurredAt])
+  @@index([documentId])
+}
+
+model Stocktake {
+  id          String          @id @default(uuid()) @db.Uuid
+  companyId   String          @db.Uuid
+  warehouseId String          @db.Uuid
+  number      String          @db.VarChar(40)
+  status      StocktakeStatus @default(DRAFT)
+  createdById String          @db.Uuid
+  startedAt   DateTime?
+  completedAt DateTime?
+  postedAt    DateTime?
+  note        String?         @db.VarChar(1000)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  warehouse   Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  createdBy   User            @relation("StocktakeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  lines       StocktakeLine[]
+
+  @@unique([companyId, number])
+  @@index([warehouseId, status])
+}
+
+model StocktakeLine {
+  id            String    @id @default(uuid()) @db.Uuid
+  stocktakeId   String    @db.Uuid
+  productId     String    @db.Uuid
+  expectedQty   Decimal   @db.Decimal(18, 3)
+  countedQty    Decimal?  @db.Decimal(18, 3)
+  stocktake     Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([stocktakeId, productId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @db.Uuid
+  actorId    String   @db.Uuid
+  entityType String   @db.VarChar(64)
+  entityId   String   @db.VarChar(64)
+  action     String   @db.VarChar(64)
+  before     Json?
+  after      Json?
+  ipAddress  String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, entityType, entityId])
+  @@index([actorId, createdAt])
+}
