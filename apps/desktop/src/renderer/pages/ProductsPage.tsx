@@ -18,6 +18,7 @@ import {
   InputNumber,
   Modal,
   Pagination,
+  Select,
   Skeleton,
   Space,
   Table,
@@ -25,7 +26,7 @@ import {
   Typography,
 } from 'antd';
 import { useState } from 'react';
-import type { PageResult, ProductSummary } from '@inventory/contracts';
+import type { PageResult, ProductSummary, WarehouseSummary } from '@inventory/contracts';
 import { api, ApiError } from '../lib/api';
 import { currencyFormat, numberFormat } from '../lib/format';
 import { getStockLevel } from '../lib/stock-level';
@@ -39,6 +40,8 @@ interface ProductFormValues {
   standardCost: number;
   salePrice: number;
   category: string;
+  openingQuantity: number;
+  openingWarehouseId?: string;
 }
 
 function StockStatusTag({
@@ -70,6 +73,11 @@ export function ProductsPage(): React.JSX.Element {
         `/products?search=${encodeURIComponent(search)}&page=${page}&pageSize=25`,
       ),
   });
+  const warehouses = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: () => api<WarehouseSummary[]>('/warehouses'),
+  });
+  const activeWarehouses = warehouses.data?.filter((warehouse) => warehouse.active) ?? [];
 
   const createProduct = useMutation({
     mutationFn: (values: ProductFormValues) =>
@@ -77,11 +85,19 @@ export function ProductsPage(): React.JSX.Element {
         method: 'POST',
         body: JSON.stringify(values),
       }),
-    onSuccess: async () => {
-      message.success('Đã tạo sản phẩm');
+    onSuccess: async (_product, values) => {
+      message.success(
+        values.openingQuantity > 0 ? 'Đã tạo sản phẩm và ghi nhận tồn ban đầu' : 'Đã tạo sản phẩm',
+      );
       setModalOpen(false);
       form.resetFields();
-      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['products'] }),
+        queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        queryClient.invalidateQueries({ queryKey: ['documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['pos-catalog'] }),
+      ]);
     },
     onError: (error) =>
       message.error(error instanceof ApiError ? error.message : 'Không thể tạo sản phẩm'),
@@ -140,6 +156,8 @@ export function ProductsPage(): React.JSX.Element {
       standardCost: product.standardCost,
       salePrice: product.salePrice,
       category: product.category,
+      openingQuantity: 0,
+      openingWarehouseId: undefined,
     });
     setModalOpen(true);
   };
@@ -417,6 +435,7 @@ export function ProductsPage(): React.JSX.Element {
             standardCost: 0,
             salePrice: 0,
             category: 'Khác',
+            openingQuantity: 0,
           }}
           onFinish={(values) =>
             editingProduct ? updateProduct.mutate(values) : createProduct.mutate(values)
@@ -467,6 +486,76 @@ export function ProductsPage(): React.JSX.Element {
               <InputNumber min={0} precision={0} className="full-width" addonAfter="₫" />
             </Form.Item>
           </div>
+          {editingProduct ? (
+            <div className="product-stock-readonly">
+              <Typography.Text type="secondary">Tổng tồn hiện tại</Typography.Text>
+              <Typography.Text strong>
+                {numberFormat.format(editingProduct.stockTotal)} {editingProduct.unit}
+              </Typography.Text>
+              <Typography.Text type="secondary">
+                Muốn thay đổi số lượng, hãy tạo Phiếu kho hoặc Phiếu điều chỉnh để giữ đúng lịch sử
+                kho.
+              </Typography.Text>
+            </div>
+          ) : (
+            <div className="form-grid">
+              <Form.Item
+                label="Số lượng tồn ban đầu"
+                name="openingQuantity"
+                rules={[
+                  { required: true, message: 'Nhập số lượng tồn ban đầu' },
+                  {
+                    type: 'integer',
+                    min: 0,
+                    message: 'Số lượng tồn phải là số nguyên không âm',
+                  },
+                ]}
+                extra="Nhập 0 nếu chưa có hàng. Hệ thống sẽ tạo phiếu nhập đã ghi sổ khi số lượng lớn hơn 0."
+              >
+                <InputNumber min={0} precision={0} step={1} className="full-width" />
+              </Form.Item>
+              <Form.Item
+                noStyle
+                shouldUpdate={(previous, current) =>
+                  previous.openingQuantity !== current.openingQuantity
+                }
+              >
+                {({ getFieldValue }) => (
+                  <Form.Item
+                    label="Kho nhận tồn ban đầu"
+                    name="openingWarehouseId"
+                    rules={[
+                      {
+                        validator: async (_rule, value?: string) => {
+                          if (Number(getFieldValue('openingQuantity')) > 0 && !value) {
+                            throw new Error('Chọn kho nhận tồn ban đầu');
+                          }
+                        },
+                      },
+                    ]}
+                    extra={
+                      activeWarehouses.length === 0
+                        ? 'Chưa có kho đang hoạt động. Hãy tạo hoặc kích hoạt kho trước.'
+                        : 'Chỉ bắt buộc khi tồn ban đầu lớn hơn 0.'
+                    }
+                  >
+                    <Select
+                      allowClear
+                      showSearch
+                      loading={warehouses.isLoading}
+                      disabled={activeWarehouses.length === 0}
+                      placeholder="Chọn kho"
+                      optionFilterProp="label"
+                      options={activeWarehouses.map((warehouse) => ({
+                        value: warehouse.id,
+                        label: `${warehouse.code} — ${warehouse.name}`,
+                      }))}
+                    />
+                  </Form.Item>
+                )}
+              </Form.Item>
+            </div>
+          )}
         </Form>
       </Modal>
     </Space>

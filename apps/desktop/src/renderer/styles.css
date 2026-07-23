@@ -209,6 +209,20 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.product-stock-readonly {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #dbe7f3;
+  border-radius: 10px;
+  background: #f6faff;
+}
+
+.product-stock-readonly .ant-typography:nth-child(2) {
+  color: #0f477f;
+  font-size: 18px;
+}
+
 .full-width {
   width: 100%;
 }
