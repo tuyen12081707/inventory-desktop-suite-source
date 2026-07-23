@@ -1,6 +1,6 @@
 import { Spin } from 'antd';
 import { lazy, Suspense } from 'react';
-import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { AppShell } from './components/AppShell';
 
@@ -40,6 +40,7 @@ const ReportPrintPage = lazy(() =>
 
 function ProtectedRoute(): React.JSX.Element {
   const { user, booting } = useAuth();
+  const location = useLocation();
   if (booting) {
     return (
       <div className="center-screen">
@@ -47,18 +48,30 @@ function ProtectedRoute(): React.JSX.Element {
       </div>
     );
   }
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  return user ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/login" replace state={{ returnTo: `${location.pathname}${location.search}` }} />
+  );
 }
 
 function GuestRoute(): React.JSX.Element {
   const { user, booting } = useAuth();
+  const location = useLocation();
+  const returnTo =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'returnTo' in location.state &&
+    typeof location.state.returnTo === 'string'
+      ? location.state.returnTo
+      : '/';
   if (booting)
     return (
       <div className="center-screen">
         <Spin size="large" />
       </div>
     );
-  return user ? <Navigate to="/" replace /> : <LoginPage />;
+  return user ? <Navigate to={returnTo} replace /> : <LoginPage />;
 }
 
 export function App(): React.JSX.Element {

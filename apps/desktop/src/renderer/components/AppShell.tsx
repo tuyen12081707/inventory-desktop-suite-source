@@ -4,13 +4,26 @@ import {
   DatabaseOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  MenuOutlined,
   PrinterOutlined,
   BarChartOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
-import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography, message } from 'antd';
+import {
+  Avatar,
+  Button,
+  Drawer,
+  Dropdown,
+  Grid,
+  Layout,
+  Menu,
+  Space,
+  Typography,
+  message,
+} from 'antd';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { desktop } from '../lib/platform';
@@ -33,37 +46,83 @@ export function AppShell(): React.JSX.Element {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [messageApi, contextHolder] = message.useMessage();
+  const screens = Grid.useBreakpoint();
+  const mobileLayout = screens.lg === false;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileLayout) setMobileMenuOpen(false);
+  }, [mobileLayout]);
 
   const print = async (): Promise<void> => {
     const result = await desktop.printCurrentWindow();
     if (!result.success) messageApi.error(result.reason ?? 'Không thể in');
   };
 
+  const navigation = (
+    <Menu
+      mode="inline"
+      selectedKeys={[location.pathname]}
+      items={menuItems}
+      onClick={({ key }) => {
+        navigate(key);
+        setMobileMenuOpen(false);
+      }}
+    />
+  );
+
+  const brand = (
+    <div className="brand">
+      <div className="brand-mark">IP</div>
+      <div>
+        <Typography.Text strong>InventoryPro</Typography.Text>
+        <Typography.Text type="secondary" className="brand-subtitle">
+          Quản lý kho
+        </Typography.Text>
+      </div>
+    </div>
+  );
+
   return (
     <Layout className="app-layout">
       {contextHolder}
-      <Sider width={236} breakpoint="lg" collapsedWidth={0} className="app-sider" theme="light">
-        <div className="brand">
-          <div className="brand-mark">IP</div>
-          <div>
-            <Typography.Text strong>InventoryPro</Typography.Text>
-            <Typography.Text type="secondary" className="brand-subtitle">
-              Quản lý kho
-            </Typography.Text>
-          </div>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={({ key }) => navigate(key)}
-        />
+      <Sider width={236} className="app-sider desktop-sider" theme="light">
+        {brand}
+        {navigation}
       </Sider>
+      <Drawer
+        title={brand}
+        placement="left"
+        width={280}
+        open={mobileLayout && mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        className="mobile-nav-drawer"
+        maskClosable
+        keyboard
+        destroyOnHidden
+      >
+        {navigation}
+      </Drawer>
       <Layout>
         <Header className="app-header">
-          <Typography.Title level={4} className="header-title">
-            Hệ thống quản lý kho
-          </Typography.Title>
+          <Space className="header-leading">
+            {mobileLayout && (
+              <Button
+                type="text"
+                className="mobile-menu-button"
+                icon={<MenuOutlined />}
+                aria-label="Mở menu điều hướng"
+                onClick={() => setMobileMenuOpen(true)}
+              />
+            )}
+            <Typography.Title level={4} className="header-title">
+              Hệ thống quản lý kho
+            </Typography.Title>
+          </Space>
           <Space size="middle">
             <Button className="print-current-page" icon={<PrinterOutlined />} onClick={print}>
               In trang hiện tại
