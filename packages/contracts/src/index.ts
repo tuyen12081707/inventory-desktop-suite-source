@@ -76,7 +76,7 @@ export interface CompanySettings {
   receiptFooter?: string;
 }
 
-export const ProductCreateSchema = z.object({
+const ProductBaseSchema = z.object({
   sku: z
     .string()
     .trim()
@@ -84,15 +84,37 @@ export const ProductCreateSchema = z.object({
     .max(64)
     .transform((value) => value.toUpperCase()),
   name: z.string().trim().min(2).max(255),
-  unit: z.string().trim().min(1).max(32).default('cái'),
+  unit: z.string().trim().min(1).max(32),
   barcode: z.string().trim().min(4).max(64).optional(),
-  reorderPoint: z.coerce.number().int('Ngưỡng tồn phải là số nguyên').min(0).default(0),
-  standardCost: z.coerce.number().min(0).default(0),
-  salePrice: z.coerce.number().min(0).default(0),
-  category: z.string().trim().min(1).max(100).default('Khác'),
+  reorderPoint: z.coerce.number().int('Ngưỡng tồn phải là số nguyên').min(0),
+  standardCost: z.coerce.number().min(0),
+  salePrice: z.coerce.number().min(0),
+  category: z.string().trim().min(1).max(100),
 });
 
-export const ProductUpdateSchema = ProductCreateSchema.partial();
+export const ProductCreateSchema = ProductBaseSchema.extend({
+  unit: ProductBaseSchema.shape.unit.default('cái'),
+  reorderPoint: ProductBaseSchema.shape.reorderPoint.default(0),
+  standardCost: ProductBaseSchema.shape.standardCost.default(0),
+  salePrice: ProductBaseSchema.shape.salePrice.default(0),
+  category: ProductBaseSchema.shape.category.default('Khác'),
+  openingQuantity: z.coerce
+    .number()
+    .int('Số lượng tồn ban đầu phải là số nguyên')
+    .min(0, 'Số lượng tồn ban đầu không được âm')
+    .default(0),
+  openingWarehouseId: z.uuid('Kho nhập ban đầu không hợp lệ').optional(),
+}).superRefine((value, context) => {
+  if (value.openingQuantity > 0 && !value.openingWarehouseId) {
+    context.addIssue({
+      code: 'custom',
+      path: ['openingWarehouseId'],
+      message: 'Chọn kho nhận tồn ban đầu',
+    });
+  }
+});
+
+export const ProductUpdateSchema = ProductBaseSchema.partial();
 
 export const WarehouseCreateSchema = z.object({
   code: z

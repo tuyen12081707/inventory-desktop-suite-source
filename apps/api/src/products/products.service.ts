@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { PageResult, ProductSummary } from '@inventory/contracts';
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 export interface ProductCreateInput {
@@ -17,9 +18,13 @@ export interface ProductCreateInput {
   standardCost: number;
   salePrice: number;
   category: string;
+  openingQuantity: number;
+  openingWarehouseId?: string;
 }
 
-export type ProductUpdateInput = Partial<ProductCreateInput>;
+export type ProductUpdateInput = Partial<
+  Omit<ProductCreateInput, 'openingQuantity' | 'openingWarehouseId'>
+>;
 
 @Injectable()
 export class ProductsService {
@@ -86,46 +91,133 @@ export class ProductsService {
     input: ProductCreateInput,
   ): Promise<ProductSummary> {
     try {
-      const product = await this.prisma.product.create({
-        data: {
-          companyId,
-          sku: input.sku,
-          name: input.name,
-          unit: input.unit,
-          reorderPoint: input.reorderPoint,
-          standardCost: input.standardCost,
-          salePrice: input.salePrice,
-          category: input.category,
-          barcodes: input.barcode
-            ? { create: { companyId, code: input.barcode, primary: true } }
-            : undefined,
-        },
-        include: { barcodes: true },
+      return await this.prisma.$transaction(async (tx) => {
+        if (input.openingQuantity > 0) {
+          const warehouse = await tx.warehouse.findFirst({
+            where: {
+              id: input.openingWarehouseId,
+              companyId,
+              active: true,
+            },
+            select: { id: true },
+          });
+          if (!warehouse) {
+            throw new BadRequestException('Kho nhận tồn ban đầu không hợp lệ hoặc đã ngừng dùng');
+          }
+        }
+
+        const product = await tx.product.create({
+          data: {
+            companyId,
+            sku: input.sku,
+            name: input.name,
+            unit: input.unit,
+            reorderPoint: input.reorderPoint,
+            standardCost: input.standardCost,
+            salePrice: input.salePrice,
+            category: input.category,
+            barcodes: input.barcode
+              ? { create: { companyId, code: input.barcode, primary: true } }
+              : undefined,
+          },
+          include: { barcodes: true },
+        });
+
+        if (input.openingQuantity > 0 && input.openingWarehouseId) {
+          const now = new Date();
+          const document = await tx.stockDocument.create({
+            data: {
+              companyId,
+              number: this.generateOpeningDocumentNumber(),
+              type: 'RECEIPT',
+              status: 'POSTED',
+              warehouseId: input.openingWarehouseId,
+              reference: `TON-DAU-${input.sku}`,
+              note: 'Tồn ban đầu được ghi nhận khi tạo sản phẩm',
+              idempotencyKey: randomUUID(),
+              createdById: actorId,
+              approvedById: actorId,
+              approvedAt: now,
+              postedAt: now,
+              lines: {
+                create: {
+                  productId: product.id,
+                  quantity: input.openingQuantity,
+                  unitCost: input.standardCost,
+                },
+              },
+            },
+            include: { lines: true },
+          });
+          const line = document.lines[0];
+          if (!line) {
+            throw new Error('Không thể tạo dòng tồn ban đầu');
+          }
+          const balance = await tx.stockBalance.create({
+            data: {
+              warehouseId: input.openingWarehouseId,
+              productId: product.id,
+              quantity: input.openingQuantity,
+              averageCost: input.standardCost,
+            },
+          });
+          await tx.stockLedger.create({
+            data: {
+              companyId,
+              documentId: document.id,
+              documentLineId: line.id,
+              warehouseId: input.openingWarehouseId,
+              productId: product.id,
+              quantityDelta: input.openingQuantity,
+              unitCost: input.standardCost,
+              balanceAfter: balance.quantity,
+            },
+          });
+          await tx.auditLog.create({
+            data: {
+              companyId,
+              actorId,
+              entityType: 'StockDocument',
+              entityId: document.id,
+              action: 'CREATE_AND_POST_OPENING_STOCK',
+              after: {
+                number: document.number,
+                productId: product.id,
+                warehouseId: input.openingWarehouseId,
+                quantity: input.openingQuantity,
+              },
+            },
+          });
+        }
+
+        const result = {
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          unit: product.unit,
+          barcode: product.barcodes[0]?.code,
+          reorderPoint: Number(product.reorderPoint),
+          standardCost: Number(product.standardCost),
+          salePrice: Number(product.salePrice),
+          category: product.category,
+          stockTotal: input.openingQuantity,
+          active: product.active,
+        };
+        await tx.auditLog.create({
+          data: {
+            companyId,
+            actorId,
+            entityType: 'Product',
+            entityId: product.id,
+            action: 'CREATE',
+            after: this.toJson({
+              ...result,
+              openingWarehouseId: input.openingWarehouseId,
+            }),
+          },
+        });
+        return result;
       });
-      const result = {
-        id: product.id,
-        sku: product.sku,
-        name: product.name,
-        unit: product.unit,
-        barcode: product.barcodes[0]?.code,
-        reorderPoint: Number(product.reorderPoint),
-        standardCost: Number(product.standardCost),
-        salePrice: Number(product.salePrice),
-        category: product.category,
-        stockTotal: 0,
-        active: product.active,
-      };
-      await this.prisma.auditLog.create({
-        data: {
-          companyId,
-          actorId,
-          entityType: 'Product',
-          entityId: product.id,
-          action: 'CREATE',
-          after: this.toJson(result),
-        },
-      });
-      return result;
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         throw new ConflictException('SKU hoặc barcode đã tồn tại');
@@ -270,5 +362,10 @@ export class ProductsService {
 
   private isUniqueViolation(error: unknown): boolean {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
+  }
+
+  private generateOpeningDocumentNumber(): string {
+    const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return `PN-${date}-${randomUUID().slice(0, 8).toUpperCase()}`;
   }
 }
