@@ -10,6 +10,8 @@ export interface ProductCreateInput {
   barcode?: string;
   reorderPoint: number;
   standardCost: number;
+  salePrice: number;
+  category: string;
 }
 
 export type ProductUpdateInput = Partial<ProductCreateInput>;
@@ -56,6 +58,8 @@ export class ProductsService {
         barcode: product.barcodes[0]?.code,
         reorderPoint: Number(product.reorderPoint),
         standardCost: Number(product.standardCost),
+        salePrice: Number(product.salePrice),
+        category: product.category,
         stockTotal: product.balances.reduce(
           (totalQuantity, balance) => totalQuantity + Number(balance.quantity),
           0,
@@ -81,6 +85,8 @@ export class ProductsService {
           unit: input.unit,
           reorderPoint: input.reorderPoint,
           standardCost: input.standardCost,
+          salePrice: input.salePrice,
+          category: input.category,
           barcodes: input.barcode
             ? { create: { companyId, code: input.barcode, primary: true } }
             : undefined,
@@ -95,6 +101,8 @@ export class ProductsService {
         barcode: product.barcodes[0]?.code,
         reorderPoint: Number(product.reorderPoint),
         standardCost: Number(product.standardCost),
+        salePrice: Number(product.salePrice),
+        category: product.category,
         stockTotal: 0,
         active: product.active,
       };
@@ -123,6 +131,8 @@ export class ProductsService {
             unit: input.unit,
             reorderPoint: input.reorderPoint,
             standardCost: input.standardCost,
+            salePrice: input.salePrice,
+            category: input.category,
           },
         });
         if (input.barcode !== undefined) {

@@ -17,7 +17,10 @@ async function bootstrap(): Promise<void> {
   const allowedOrigins = env.CORS_ORIGINS.split(',').map((origin) => origin.trim());
   const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
-      const allowed = !origin || allowedOrigins.includes(origin);
+      const allowed =
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        (origin === 'null' && allowedOrigins.includes('file://'));
       callback(allowed ? null : new Error('Origin is not allowed'), allowed);
     },
     credentials: false,

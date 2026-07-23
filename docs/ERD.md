@@ -17,6 +17,12 @@ erDiagram
   PRODUCT ||--o{ STOCK_LEDGER : moves
   WAREHOUSE ||--o{ STOCK_LEDGER : records
 
+  SALE ||--|{ SALE_LINE : contains
+  PRODUCT ||--o{ SALE_LINE : sold_as
+  WAREHOUSE ||--o{ SALE : fulfills
+  USER ||--o{ SALE : sells
+  STOCK_DOCUMENT ||--o| SALE : posts_for
+
   STOCKTAKE ||--|{ STOCKTAKE_LINE : contains
   PRODUCT ||--o{ STOCKTAKE_LINE : counted
   USER ||--o{ AUDIT_LOG : performs

@@ -2,8 +2,8 @@
 
 ## Mục tiêu
 
-InventoryPro là ứng dụng desktop Windows-first, online-first cho một công ty có nhiều kho.
-Server là nguồn dữ liệu chuẩn; desktop không tự quyết định tồn kho hợp lệ.
+InventoryPro là ứng dụng desktop/web online-first cho một công ty có nhiều kho. Server là
+nguồn dữ liệu chuẩn; client không tự quyết định tồn kho hợp lệ.
 
 ## Sơ đồ hệ thống
 
@@ -17,6 +17,8 @@ flowchart LR
     end
 
     Scanner["Barcode scanner"] -->|"Keyboard HID"| React
+    Camera["Camera barcode"] --> React
+    Web["GitHub Pages web app"] -->|"HTTPS / JSON"| API
     Main --> Printer["Máy in"]
     React -->|"HTTPS / JSON"| API["NestJS modular monolith"]
     API --> DB[("PostgreSQL")]
@@ -31,6 +33,7 @@ flowchart TB
     Warehouses["Warehouses"]
     Inventory["Inventory"]
     Documents["Stock documents"]
+    Sales["Sales / POS"]
     Audit["Audit log"]
     DB[("PostgreSQL")]
 
@@ -38,6 +41,8 @@ flowchart TB
     Products --> DB
     Warehouses --> DB
     Documents --> Inventory
+    Sales --> Inventory
+    Sales --> Documents
     Inventory --> DB
     Documents --> Audit
     Audit --> DB
@@ -57,6 +62,8 @@ ownership độc lập đã được chứng minh.
 5. Phiếu đã `POSTED` không được sửa hoặc xóa. Việc hiệu chỉnh phải sinh chứng từ đảo.
 6. `idempotencyKey` chặn yêu cầu tạo phiếu bị gửi lặp.
 7. Xuất kho dùng conditional update để không thể âm kho do concurrent request.
+8. POS tạo `Sale`, phiếu `ISSUE`, ledger và balance trong cùng transaction.
+9. Giá bán được đọc lại từ server khi checkout; client không thể tự sửa giá.
 
 ## Ranh giới bảo mật Electron
 
@@ -70,7 +77,7 @@ ownership độc lập đã được chứng minh.
 ## Quyết định chưa đưa vào MVP
 
 - Offline write và đồng bộ hai chiều.
-- POS, kế toán, hóa đơn điện tử.
+- Kế toán và hóa đơn điện tử.
 - Quản lý lô, hạn sử dụng và serial.
 - Microservices, Kafka hoặc Kubernetes.
 

@@ -5,6 +5,7 @@ import {
   FileTextOutlined,
   LogoutOutlined,
   PrinterOutlined,
+  ShoppingCartOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography, message } from 'antd';
@@ -16,6 +17,7 @@ const { Header, Sider, Content } = Layout;
 
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: 'Tổng quan' },
+  { key: '/pos', icon: <ShoppingCartOutlined />, label: 'Bán hàng POS' },
   { key: '/products', icon: <AppstoreOutlined />, label: 'Sản phẩm' },
   { key: '/inventory', icon: <DatabaseOutlined />, label: 'Tồn kho' },
   { key: '/documents', icon: <FileTextOutlined />, label: 'Phiếu kho' },

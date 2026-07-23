@@ -7,6 +7,7 @@ Monorepo ứng dụng quản lý kho desktop cho công ty:
 - PostgreSQL + Prisma
 - JWT access token, refresh rotation và RBAC
 - Stock ledger bất biến, transaction serializable và idempotency
+- POS, máy quét barcode/camera và checkout tự động trừ tồn kho
 - Docker Compose, seed, test và CI/CD bằng GitHub Actions
 
 ## Yêu cầu
@@ -78,5 +79,7 @@ docs                Tài liệu kiến trúc và ERD
 
 Đọc [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) trước khi mở rộng nghiệp vụ tồn kho.
 Quy trình build, container và phát hành nằm tại [docs/CICD.md](docs/CICD.md).
+Hướng dẫn GitHub Pages, API và PostgreSQL cloud nằm tại
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 > Electron Forge hiện nên chạy bằng Node 22/24. Node 26 chưa nằm trong dải engine của dự án.

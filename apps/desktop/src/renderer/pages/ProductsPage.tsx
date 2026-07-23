@@ -25,6 +25,8 @@ interface ProductFormValues {
   barcode?: string;
   reorderPoint: number;
   standardCost: number;
+  salePrice: number;
+  category: string;
 }
 
 export function ProductsPage(): React.JSX.Element {
@@ -110,11 +112,18 @@ export function ProductsPage(): React.JSX.Element {
               ),
             },
             {
-              title: 'Giá chuẩn',
+              title: 'Giá vốn',
               dataIndex: 'standardCost',
               align: 'right',
               render: (value: number) => currencyFormat.format(value),
             },
+            {
+              title: 'Giá bán',
+              dataIndex: 'salePrice',
+              align: 'right',
+              render: (value: number) => currencyFormat.format(value),
+            },
+            { title: 'Nhóm hàng', dataIndex: 'category', width: 130 },
             {
               title: 'Trạng thái',
               dataIndex: 'active',
@@ -139,7 +148,13 @@ export function ProductsPage(): React.JSX.Element {
         <Form<ProductFormValues>
           form={form}
           layout="vertical"
-          initialValues={{ unit: 'cái', reorderPoint: 0, standardCost: 0 }}
+          initialValues={{
+            unit: 'cái',
+            reorderPoint: 0,
+            standardCost: 0,
+            salePrice: 0,
+            category: 'Khác',
+          }}
           onFinish={(values) => createProduct.mutate(values)}
         >
           <div className="form-grid">
@@ -164,11 +179,21 @@ export function ProductsPage(): React.JSX.Element {
           <Form.Item label="Barcode" name="barcode">
             <Input placeholder="Quét hoặc nhập barcode" />
           </Form.Item>
+          <Form.Item
+            label="Nhóm hàng"
+            name="category"
+            rules={[{ required: true, message: 'Nhập nhóm hàng' }]}
+          >
+            <Input placeholder="Ví dụ: Phụ kiện, Màn hình..." />
+          </Form.Item>
           <div className="form-grid">
             <Form.Item label="Ngưỡng tồn" name="reorderPoint" rules={[{ required: true }]}>
               <InputNumber min={0} precision={3} className="full-width" />
             </Form.Item>
             <Form.Item label="Giá vốn chuẩn" name="standardCost" rules={[{ required: true }]}>
+              <InputNumber min={0} precision={0} className="full-width" addonAfter="₫" />
+            </Form.Item>
+            <Form.Item label="Giá bán" name="salePrice" rules={[{ required: true }]}>
               <InputNumber min={0} precision={0} className="full-width" addonAfter="₫" />
             </Form.Item>
           </div>

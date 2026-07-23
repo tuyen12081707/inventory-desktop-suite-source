@@ -36,6 +36,8 @@ jobs:
         run: npm ci
 
       - name: Build distributables
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://inventory-pro-api-tuyen12081707.onrender.com/api/v1' }}
         run: npm run make -w @inventory/desktop
 
       - name: Upload distributables

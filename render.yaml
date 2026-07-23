@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: inventory-pro-api-tuyen12081707
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/v1/health
+    preDeployCommand: npm run db:deploy
+    initialDeployHook: npm run db:seed
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-pro-db-tuyen12081707
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: '30'
+      - key: CORS_ORIGINS
+        value: https://tuyen12081707.github.io,http://localhost:5173,file://
+      - key: SEED_ADMIN_EMAIL
+        value: admin@company.local
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: inventory-pro-db-tuyen12081707
+    plan: free
+    region: singapore
+    postgresMajorVersion: '17'
+    databaseName: inventory
+    user: inventory
+    ipAllowList: []

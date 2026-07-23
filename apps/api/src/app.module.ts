@@ -7,10 +7,18 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { HealthController } from './health/health.controller';
 import { InventoryModule } from './inventory/inventory.module';
 import { ProductsModule } from './products/products.module';
+import { SalesModule } from './sales/sales.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ProductsModule, WarehousesModule, InventoryModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ProductsModule,
+    WarehousesModule,
+    InventoryModule,
+    SalesModule,
+  ],
   controllers: [HealthController],
   providers: [
     {

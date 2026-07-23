@@ -18,6 +18,7 @@
     "@ant-design/icons": "6.1.0",
     "@inventory/contracts": "*",
     "@tanstack/react-query": "5.101.4",
+    "@zxing/browser": "^0.1.5",
     "antd": "6.5.1",
     "dayjs": "1.11.19",
     "react": "19.2.8",

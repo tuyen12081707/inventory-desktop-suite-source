@@ -35,6 +35,8 @@ export const ProductCreateSchema = z.object({
   barcode: z.string().trim().min(4).max(64).optional(),
   reorderPoint: z.coerce.number().min(0).default(0),
   standardCost: z.coerce.number().min(0).default(0),
+  salePrice: z.coerce.number().min(0).default(0),
+  category: z.string().trim().min(1).max(100).default('Khác'),
 });
 
 export const ProductUpdateSchema = ProductCreateSchema.partial();
@@ -131,6 +133,8 @@ export interface ProductSummary {
   barcode?: string;
   reorderPoint: number;
   standardCost: number;
+  salePrice: number;
+  category: string;
   stockTotal: number;
   active: boolean;
 }
@@ -171,4 +175,64 @@ export interface StockDocumentSummary {
   lineCount: number;
   createdAt: string;
   postedAt?: string;
+}
+
+export const PaymentMethodSchema = z.enum(['CASH', 'CARD', 'BANK_TRANSFER']);
+export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
+
+export const SaleCheckoutSchema = z.object({
+  warehouseId: z.uuid(),
+  customerName: z.string().trim().max(255).optional(),
+  customerPhone: z.string().trim().max(32).optional(),
+  discount: z.coerce.number().min(0).default(0),
+  taxRate: z.coerce.number().min(0).max(100).default(0),
+  paymentMethod: PaymentMethodSchema.default('CASH'),
+  idempotencyKey: z.uuid(),
+  lines: z
+    .array(
+      z.object({
+        productId: z.uuid(),
+        quantity: z.coerce.number().positive().max(99999),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+export interface PosCatalogItem {
+  id: string;
+  sku: string;
+  name: string;
+  unit: string;
+  barcode?: string;
+  category: string;
+  salePrice: number;
+  stockQuantity: number;
+  reorderPoint: number;
+}
+
+export interface SaleReceipt {
+  id: string;
+  number: string;
+  warehouseName: string;
+  status: 'COMPLETED' | 'VOIDED';
+  customerName?: string;
+  customerPhone?: string;
+  subtotal: number;
+  discount: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  soldByName: string;
+  soldAt: string;
+  lines: Array<{
+    productId: string;
+    sku: string;
+    name: string;
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }>;
 }

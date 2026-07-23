@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
+const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
+const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123456';
 
 const permissionDefinitions = [
   ['products.read', 'Xem sản phẩm'],
@@ -17,6 +19,8 @@ const permissionDefinitions = [
   ['documents.write', 'Tạo phiếu kho'],
   ['documents.approve', 'Duyệt phiếu kho'],
   ['documents.post', 'Ghi sổ phiếu kho'],
+  ['sales.read', 'Xem màn hình bán hàng và hóa đơn'],
+  ['sales.checkout', 'Tạo hóa đơn và trừ tồn kho'],
 ] as const;
 
 async function main(): Promise<void> {
@@ -58,15 +62,15 @@ async function main(): Promise<void> {
     where: {
       companyId_email: {
         companyId: company.id,
-        email: 'admin@company.local',
+        email: adminEmail,
       },
     },
     update: {},
     create: {
       companyId: company.id,
-      email: 'admin@company.local',
+      email: adminEmail,
       fullName: 'Quản trị hệ thống',
-      passwordHash: await hash('Admin@123456', 12),
+      passwordHash: await hash(adminPassword, 12),
     },
   });
 
@@ -95,6 +99,8 @@ async function main(): Promise<void> {
       barcode: '893001000001',
       reorderPoint: 20,
       standardCost: 350000,
+      salePrice: 590000,
+      category: 'Phụ kiện',
       openingQty: 120,
     },
     {
@@ -104,6 +110,8 @@ async function main(): Promise<void> {
       barcode: '893001000002',
       reorderPoint: 5,
       standardCost: 8200000,
+      salePrice: 9800000,
+      category: 'Màn hình',
       openingQty: 8,
     },
     {
@@ -113,6 +121,8 @@ async function main(): Promise<void> {
       barcode: '893001000003',
       reorderPoint: 10,
       standardCost: 1450000,
+      salePrice: 2150000,
+      category: 'Phụ kiện',
       openingQty: 24,
     },
   ];
@@ -126,7 +136,14 @@ async function main(): Promise<void> {
   for (const item of products) {
     const product = await prisma.product.upsert({
       where: { companyId_sku: { companyId: company.id, sku: item.sku } },
-      update: {},
+      update: {
+        name: item.name,
+        unit: item.unit,
+        reorderPoint: item.reorderPoint,
+        standardCost: item.standardCost,
+        salePrice: item.salePrice,
+        category: item.category,
+      },
       create: {
         companyId: company.id,
         sku: item.sku,
@@ -134,6 +151,8 @@ async function main(): Promise<void> {
         unit: item.unit,
         reorderPoint: item.reorderPoint,
         standardCost: item.standardCost,
+        salePrice: item.salePrice,
+        category: item.category,
         barcodes: {
           create: {
             companyId: company.id,
@@ -231,7 +250,7 @@ async function main(): Promise<void> {
 
 main()
   .then(() => {
-    console.info('Seed completed. Login: admin@company.local / Admin@123456');
+    console.info(`Seed completed. Login: ${adminEmail}`);
   })
   .finally(async () => {
     await prisma.$disconnect();

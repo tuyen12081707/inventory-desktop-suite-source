@@ -35,21 +35,33 @@ enum StocktakeStatus {
   CANCELLED
 }
 
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+}
+
 model Company {
-  id             String          @id @default(uuid()) @db.Uuid
-  code           String          @unique @db.VarChar(32)
-  name           String          @db.VarChar(255)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  users          User[]
-  roles          Role[]
-  warehouses     Warehouse[]
-  products       Product[]
-  barcodes       ProductBarcode[]
-  documents      StockDocument[]
-  ledgers        StockLedger[]
-  stocktakes     Stocktake[]
-  auditLogs      AuditLog[]
+  id         String           @id @default(uuid()) @db.Uuid
+  code       String           @unique @db.VarChar(32)
+  name       String           @db.VarChar(255)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  users      User[]
+  roles      Role[]
+  warehouses Warehouse[]
+  products   Product[]
+  barcodes   ProductBarcode[]
+  documents  StockDocument[]
+  ledgers    StockLedger[]
+  stocktakes Stocktake[]
+  sales      Sale[]
+  auditLogs  AuditLog[]
 }
 
 model User {
@@ -66,7 +78,8 @@ model User {
   refreshTokens     RefreshToken[]
   createdDocuments  StockDocument[] @relation("DocumentCreator")
   approvedDocuments StockDocument[] @relation("DocumentApprover")
-  createdStocktakes Stocktake[]      @relation("StocktakeCreator")
+  createdStocktakes Stocktake[]     @relation("StocktakeCreator")
+  sales             Sale[]          @relation("SaleSeller")
   auditLogs         AuditLog[]
 
   @@unique([companyId, email])
@@ -137,28 +150,32 @@ model Warehouse {
   sourceDocuments      StockDocument[] @relation("SourceWarehouse")
   destinationDocuments StockDocument[] @relation("DestinationWarehouse")
   stocktakes           Stocktake[]
+  sales                Sale[]
 
   @@unique([companyId, code])
   @@index([companyId, active])
 }
 
 model Product {
-  id            String              @id @default(uuid()) @db.Uuid
-  companyId     String              @db.Uuid
-  sku           String              @db.VarChar(64)
-  name          String              @db.VarChar(255)
-  unit          String              @default("cái") @db.VarChar(32)
-  reorderPoint  Decimal             @default(0) @db.Decimal(18, 3)
-  standardCost  Decimal             @default(0) @db.Decimal(18, 4)
-  active        Boolean             @default(true)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  barcodes      ProductBarcode[]
-  balances      StockBalance[]
-  documentLines StockDocumentLine[]
-  ledgers       StockLedger[]
+  id             String              @id @default(uuid()) @db.Uuid
+  companyId      String              @db.Uuid
+  sku            String              @db.VarChar(64)
+  name           String              @db.VarChar(255)
+  unit           String              @default("cái") @db.VarChar(32)
+  reorderPoint   Decimal             @default(0) @db.Decimal(18, 3)
+  standardCost   Decimal             @default(0) @db.Decimal(18, 4)
+  salePrice      Decimal             @default(0) @db.Decimal(18, 2)
+  category       String              @default("Khác") @db.VarChar(100)
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  barcodes       ProductBarcode[]
+  balances       StockBalance[]
+  documentLines  StockDocumentLine[]
+  ledgers        StockLedger[]
   stocktakeLines StocktakeLine[]
+  saleLines      SaleLine[]
 
   @@unique([companyId, sku])
   @@index([companyId, name])
@@ -218,6 +235,7 @@ model StockDocument {
   approvedBy             User?               @relation("DocumentApprover", fields: [approvedById], references: [id], onDelete: Restrict)
   lines                  StockDocumentLine[]
   ledgers                StockLedger[]
+  sale                   Sale?
 
   @@unique([companyId, number])
   @@unique([companyId, idempotencyKey])
@@ -226,13 +244,13 @@ model StockDocument {
 }
 
 model StockDocumentLine {
-  id         String         @id @default(uuid()) @db.Uuid
-  documentId String         @db.Uuid
-  productId  String         @db.Uuid
-  quantity   Decimal        @db.Decimal(18, 3)
-  unitCost   Decimal        @default(0) @db.Decimal(18, 4)
-  document   StockDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  product    Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  id         String        @id @default(uuid()) @db.Uuid
+  documentId String        @db.Uuid
+  productId  String        @db.Uuid
+  quantity   Decimal       @db.Decimal(18, 3)
+  unitCost   Decimal       @default(0) @db.Decimal(18, 4)
+  document   StockDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
   ledgers    StockLedger[]
 
   @@unique([documentId, productId])
@@ -284,15 +302,59 @@ model Stocktake {
 }
 
 model StocktakeLine {
-  id            String    @id @default(uuid()) @db.Uuid
-  stocktakeId   String    @db.Uuid
-  productId     String    @db.Uuid
-  expectedQty   Decimal   @db.Decimal(18, 3)
-  countedQty    Decimal?  @db.Decimal(18, 3)
-  stocktake     Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  id          String    @id @default(uuid()) @db.Uuid
+  stocktakeId String    @db.Uuid
+  productId   String    @db.Uuid
+  expectedQty Decimal   @db.Decimal(18, 3)
+  countedQty  Decimal?  @db.Decimal(18, 3)
+  stocktake   Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@unique([stocktakeId, productId])
+}
+
+model Sale {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  number          String        @db.VarChar(40)
+  warehouseId     String        @db.Uuid
+  status          SaleStatus    @default(COMPLETED)
+  customerName    String?       @db.VarChar(255)
+  customerPhone   String?       @db.VarChar(32)
+  subtotal        Decimal       @db.Decimal(18, 2)
+  discount        Decimal       @default(0) @db.Decimal(18, 2)
+  taxRate         Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal       @default(0) @db.Decimal(18, 2)
+  total           Decimal       @db.Decimal(18, 2)
+  paymentMethod   PaymentMethod
+  idempotencyKey  String        @db.Uuid
+  stockDocumentId String        @unique @db.Uuid
+  soldById        String        @db.Uuid
+  soldAt          DateTime      @default(now())
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  warehouse       Warehouse     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  stockDocument   StockDocument @relation(fields: [stockDocumentId], references: [id], onDelete: Restrict)
+  soldBy          User          @relation("SaleSeller", fields: [soldById], references: [id], onDelete: Restrict)
+  lines           SaleLine[]
+
+  @@unique([companyId, number])
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, soldAt])
+  @@index([warehouseId, soldAt])
+}
+
+model SaleLine {
+  id        String  @id @default(uuid()) @db.Uuid
+  saleId    String  @db.Uuid
+  productId String  @db.Uuid
+  quantity  Decimal @db.Decimal(18, 3)
+  unitPrice Decimal @db.Decimal(18, 2)
+  lineTotal Decimal @db.Decimal(18, 2)
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, productId])
+  @@index([productId])
 }
 
 model AuditLog {
