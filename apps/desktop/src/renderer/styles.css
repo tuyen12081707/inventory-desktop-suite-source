@@ -146,6 +146,10 @@ body {
   height: 34px;
 }
 
+.products-mobile-list {
+  display: none;
+}
+
 .stat-card {
   display: flex;
   align-items: center;
@@ -901,6 +905,139 @@ body {
   .pos-toolbar > .ant-select,
   .print-current-page {
     width: 100%;
+  }
+
+  .products-panel .ant-card-body {
+    padding: 12px;
+  }
+
+  .products-panel .table-search {
+    margin-bottom: 12px;
+  }
+
+  .products-desktop-table {
+    display: none;
+  }
+
+  .products-mobile-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-product-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #e4e9f0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(16, 35, 61, 0.04);
+  }
+
+  .mobile-product-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-product-header > div:first-child {
+    min-width: 0;
+  }
+
+  .mobile-product-name,
+  .mobile-product-sku {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-product-name {
+    padding-top: 2px;
+    color: #10233d;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .mobile-product-sku {
+    margin-top: 2px;
+    font-size: 12px;
+  }
+
+  .mobile-product-actions {
+    flex: 0 0 auto;
+    margin: -7px -8px 0 0;
+  }
+
+  .mobile-product-actions .ant-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mobile-product-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .mobile-product-tags .ant-tag {
+    margin-inline-end: 0;
+  }
+
+  .mobile-product-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .mobile-product-metrics > div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 9px;
+    background: #f6f8fb;
+  }
+
+  .mobile-product-metrics span,
+  .mobile-product-meta span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+  }
+
+  .mobile-product-metrics strong {
+    display: block;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: #10233d;
+    font-size: 14px;
+  }
+
+  .mobile-product-meta {
+    display: grid;
+    gap: 5px;
+    margin-top: 12px;
+  }
+
+  .mobile-product-meta strong {
+    color: #344054;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-product-loading {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-product-loading .ant-skeleton {
+    padding: 14px;
+    border: 1px solid #e4e9f0;
+    border-radius: 12px;
+  }
+
+  .mobile-product-pagination {
+    justify-self: center;
+    margin-top: 4px;
   }
 
   .app-header .ant-space {

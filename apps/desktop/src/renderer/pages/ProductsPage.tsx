@@ -12,10 +12,13 @@ import {
   Button,
   Card,
   Dropdown,
+  Empty,
   Form,
   Input,
   InputNumber,
   Modal,
+  Pagination,
+  Skeleton,
   Space,
   Table,
   Tag,
@@ -150,6 +153,39 @@ export function ProductsPage(): React.JSX.Element {
     });
   };
 
+  const renderProductActions = (product: ProductSummary): React.JSX.Element => (
+    <Dropdown
+      trigger={['click']}
+      placement="bottomRight"
+      menu={{
+        items: [
+          { key: 'edit', icon: <EditOutlined />, label: 'Sửa sản phẩm' },
+          {
+            key: 'status',
+            icon: <PoweroffOutlined />,
+            label: product.active ? 'Ngừng sử dụng' : 'Kích hoạt lại',
+          },
+          { type: 'divider' },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined />,
+            label: 'Xóa sản phẩm',
+            danger: true,
+          },
+        ],
+        onClick: ({ key }) => {
+          if (key === 'edit') openEdit(product);
+          if (key === 'status') confirmStatusChange(product);
+          if (key === 'delete') confirmDelete(product);
+        },
+      }}
+    >
+      <Button type="text" icon={<MoreOutlined />} aria-label={`Thao tác với ${product.name}`} />
+    </Dropdown>
+  );
+
+  const productData = products.data?.data ?? [];
+
   return (
     <Space direction="vertical" size="large" className="page-stack">
       <div className="page-heading">
@@ -161,7 +197,7 @@ export function ProductsPage(): React.JSX.Element {
           Thêm sản phẩm
         </Button>
       </div>
-      <Card>
+      <Card className="products-panel">
         <Input
           allowClear
           prefix={<SearchOutlined />}
@@ -173,118 +209,158 @@ export function ProductsPage(): React.JSX.Element {
           }}
           className="table-search"
         />
-        <Table
-          rowKey="id"
-          loading={products.isLoading}
-          dataSource={products.data?.data}
-          className="products-table"
-          scroll={{ x: 1050 }}
-          pagination={{
-            current: page,
-            pageSize: 25,
-            total: products.data?.meta.total,
-            showSizeChanger: false,
-            onChange: setPage,
-          }}
-          columns={[
-            { title: 'SKU', dataIndex: 'sku', width: 105, fixed: 'left' },
-            {
-              title: 'Tên sản phẩm',
-              dataIndex: 'name',
-              width: 210,
-              ellipsis: true,
-            },
-            {
-              title: 'Barcode',
-              dataIndex: 'barcode',
-              width: 150,
-              responsive: ['lg'],
-              render: (value?: string) => value ?? '—',
-            },
-            { title: 'ĐVT', dataIndex: 'unit', width: 72, responsive: ['lg'] },
-            {
-              title: 'Tổng tồn',
-              dataIndex: 'stockTotal',
-              align: 'right',
-              width: 130,
-              render: (value: number, row: ProductSummary) => (
-                <Space>
-                  {numberFormat.format(value)}
-                  {value <= row.reorderPoint && <Tag color="red">Sắp hết</Tag>}
-                </Space>
-              ),
-            },
-            {
-              title: 'Giá vốn',
-              dataIndex: 'standardCost',
-              align: 'right',
-              width: 130,
-              responsive: ['xl'],
-              render: (value: number) => currencyFormat.format(value),
-            },
-            {
-              title: 'Giá bán',
-              dataIndex: 'salePrice',
-              align: 'right',
-              width: 130,
-              responsive: ['md'],
-              render: (value: number) => currencyFormat.format(value),
-            },
-            { title: 'Nhóm hàng', dataIndex: 'category', width: 120, responsive: ['lg'] },
-            {
-              title: 'Trạng thái',
-              dataIndex: 'active',
-              width: 105,
-              responsive: ['sm'],
-              render: (active: boolean) => (
-                <Tag color={active ? 'green' : 'default'}>
-                  {active ? 'Đang dùng' : 'Ngừng dùng'}
-                </Tag>
-              ),
-            },
-            {
-              title: '',
-              key: 'actions',
-              fixed: 'right',
-              width: 56,
-              align: 'center',
-              render: (_value: unknown, row: ProductSummary) => (
-                <Dropdown
-                  trigger={['click']}
-                  placement="bottomRight"
-                  menu={{
-                    items: [
-                      { key: 'edit', icon: <EditOutlined />, label: 'Sửa sản phẩm' },
-                      {
-                        key: 'status',
-                        icon: <PoweroffOutlined />,
-                        label: row.active ? 'Ngừng sử dụng' : 'Kích hoạt lại',
-                      },
-                      { type: 'divider' },
-                      {
-                        key: 'delete',
-                        icon: <DeleteOutlined />,
-                        label: 'Xóa sản phẩm',
-                        danger: true,
-                      },
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === 'edit') openEdit(row);
-                      if (key === 'status') confirmStatusChange(row);
-                      if (key === 'delete') confirmDelete(row);
-                    },
-                  }}
-                >
-                  <Button
-                    type="text"
-                    icon={<MoreOutlined />}
-                    aria-label={`Thao tác với ${row.name}`}
-                  />
-                </Dropdown>
-              ),
-            },
-          ]}
-        />
+        <div className="products-desktop-table">
+          <Table
+            rowKey="id"
+            loading={products.isLoading}
+            dataSource={productData}
+            className="products-table"
+            scroll={{ x: 1050 }}
+            pagination={{
+              current: page,
+              pageSize: 25,
+              total: products.data?.meta.total,
+              showSizeChanger: false,
+              onChange: setPage,
+            }}
+            columns={[
+              { title: 'SKU', dataIndex: 'sku', width: 105, fixed: 'left' },
+              {
+                title: 'Tên sản phẩm',
+                dataIndex: 'name',
+                width: 210,
+                ellipsis: true,
+              },
+              {
+                title: 'Barcode',
+                dataIndex: 'barcode',
+                width: 150,
+                responsive: ['lg'],
+                render: (value?: string) => value ?? '—',
+              },
+              { title: 'ĐVT', dataIndex: 'unit', width: 72, responsive: ['lg'] },
+              {
+                title: 'Tổng tồn',
+                dataIndex: 'stockTotal',
+                align: 'right',
+                width: 130,
+                render: (value: number, row: ProductSummary) => (
+                  <Space>
+                    {numberFormat.format(value)}
+                    {value <= row.reorderPoint && <Tag color="red">Sắp hết</Tag>}
+                  </Space>
+                ),
+              },
+              {
+                title: 'Giá vốn',
+                dataIndex: 'standardCost',
+                align: 'right',
+                width: 130,
+                responsive: ['xl'],
+                render: (value: number) => currencyFormat.format(value),
+              },
+              {
+                title: 'Giá bán',
+                dataIndex: 'salePrice',
+                align: 'right',
+                width: 130,
+                responsive: ['md'],
+                render: (value: number) => currencyFormat.format(value),
+              },
+              { title: 'Nhóm hàng', dataIndex: 'category', width: 120, responsive: ['lg'] },
+              {
+                title: 'Trạng thái',
+                dataIndex: 'active',
+                width: 105,
+                responsive: ['sm'],
+                render: (active: boolean) => (
+                  <Tag color={active ? 'green' : 'default'}>
+                    {active ? 'Đang dùng' : 'Ngừng dùng'}
+                  </Tag>
+                ),
+              },
+              {
+                title: '',
+                key: 'actions',
+                fixed: 'right',
+                width: 56,
+                align: 'center',
+                render: (_value: unknown, row: ProductSummary) => renderProductActions(row),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="products-mobile-list">
+          {products.isLoading ? (
+            <div className="mobile-product-loading">
+              <Skeleton active paragraph={{ rows: 3 }} />
+              <Skeleton active paragraph={{ rows: 3 }} />
+            </div>
+          ) : products.isError ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không thể tải sản phẩm" />
+          ) : productData.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có sản phẩm phù hợp" />
+          ) : (
+            productData.map((product) => (
+              <article className="mobile-product-card" key={product.id}>
+                <div className="mobile-product-header">
+                  <div>
+                    <Typography.Text strong className="mobile-product-name">
+                      {product.name}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" className="mobile-product-sku">
+                      {product.sku}
+                    </Typography.Text>
+                  </div>
+                  <div className="mobile-product-actions">{renderProductActions(product)}</div>
+                </div>
+
+                <div className="mobile-product-tags">
+                  <Tag color={product.active ? 'green' : 'default'}>
+                    {product.active ? 'Đang dùng' : 'Ngừng dùng'}
+                  </Tag>
+                  {product.stockTotal <= product.reorderPoint && <Tag color="red">Sắp hết</Tag>}
+                  <Tag>{product.category}</Tag>
+                </div>
+
+                <div className="mobile-product-metrics">
+                  <div>
+                    <span>Tồn kho</span>
+                    <strong>
+                      {numberFormat.format(product.stockTotal)} {product.unit}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Giá bán</span>
+                    <strong>{currencyFormat.format(product.salePrice)}</strong>
+                  </div>
+                </div>
+
+                <div className="mobile-product-meta">
+                  <span>
+                    Barcode: <strong>{product.barcode ?? 'Chưa có'}</strong>
+                  </span>
+                  <span>
+                    Giá vốn: <strong>{currencyFormat.format(product.standardCost)}</strong>
+                  </span>
+                </div>
+              </article>
+            ))
+          )}
+
+          {(products.data?.meta.total ?? 0) > 0 && (
+            <Pagination
+              simple
+              current={page}
+              pageSize={25}
+              total={products.data?.meta.total}
+              showSizeChanger={false}
+              onChange={setPage}
+              className="mobile-product-pagination"
+            />
+          )}
+        </div>
       </Card>
 
       <Modal
