@@ -27,7 +27,9 @@ Trong màn hình Blueprint:
 3. Xác nhận tạo `inventory-pro-api-tuyen12081707` và PostgreSQL.
 4. Chờ health check `/api/v1/health` trả về `database: up`.
 
-Render tự chạy migration trước mỗi deploy và seed admin ở lần deploy đầu tiên.
+Trên free tier, container tự chạy migration idempotent trước khi khởi động API và
+Render seed admin một lần sau lần deploy đầu tiên. Production trả phí nên chuyển
+migration trở lại `preDeployCommand` để tách migration khỏi tiến trình phục vụ API.
 
 > Gói Render Postgres miễn phí phù hợp để test nhưng hết hạn sau 30 ngày và không có
 > backup. Dữ liệu công ty phải dùng database trả phí, backup hằng ngày và kiểm tra
