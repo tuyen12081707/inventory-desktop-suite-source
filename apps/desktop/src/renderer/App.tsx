@@ -25,6 +25,18 @@ const ProductsPage = lazy(() =>
 const WarehousesPage = lazy(() =>
   import('./pages/WarehousesPage').then((module) => ({ default: module.WarehousesPage })),
 );
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })),
+);
+const ReceiptPage = lazy(() =>
+  import('./pages/ReceiptPage').then((module) => ({ default: module.ReceiptPage })),
+);
+const ReportsPage = lazy(() =>
+  import('./pages/ReportsPage').then((module) => ({ default: module.ReportsPage })),
+);
+const ReportPrintPage = lazy(() =>
+  import('./pages/ReportPrintPage').then((module) => ({ default: module.ReportPrintPage })),
+);
 
 function ProtectedRoute(): React.JSX.Element {
   const { user, booting } = useAuth();
@@ -62,6 +74,8 @@ export function App(): React.JSX.Element {
         <Routes>
           <Route path="/login" element={<GuestRoute />} />
           <Route element={<ProtectedRoute />}>
+            <Route path="receipt/:id" element={<ReceiptPage />} />
+            <Route path="reports/print" element={<ReportPrintPage />} />
             <Route element={<AppShell />}>
               <Route index element={<DashboardPage />} />
               <Route path="pos" element={<PosPage />} />
@@ -69,6 +83,8 @@ export function App(): React.JSX.Element {
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="warehouses" element={<WarehousesPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

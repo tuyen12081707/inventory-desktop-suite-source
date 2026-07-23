@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PageResult, ProductSummary } from '@inventory/contracts';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -75,7 +80,11 @@ export class ProductsService {
     };
   }
 
-  async create(companyId: string, input: ProductCreateInput): Promise<ProductSummary> {
+  async create(
+    companyId: string,
+    actorId: string,
+    input: ProductCreateInput,
+  ): Promise<ProductSummary> {
     try {
       const product = await this.prisma.product.create({
         data: {
@@ -93,7 +102,7 @@ export class ProductsService {
         },
         include: { barcodes: true },
       });
-      return {
+      const result = {
         id: product.id,
         sku: product.sku,
         name: product.name,
@@ -106,6 +115,17 @@ export class ProductsService {
         stockTotal: 0,
         active: product.active,
       };
+      await this.prisma.auditLog.create({
+        data: {
+          companyId,
+          actorId,
+          entityType: 'Product',
+          entityId: product.id,
+          action: 'CREATE',
+          after: this.toJson(result),
+        },
+      });
+      return result;
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         throw new ConflictException('SKU hoặc barcode đã tồn tại');
@@ -114,7 +134,12 @@ export class ProductsService {
     }
   }
 
-  async update(companyId: string, productId: string, input: ProductUpdateInput): Promise<void> {
+  async update(
+    companyId: string,
+    actorId: string,
+    productId: string,
+    input: ProductUpdateInput,
+  ): Promise<void> {
     const existing = await this.prisma.product.findFirst({
       where: { id: productId, companyId },
       include: { barcodes: { where: { primary: true } } },
@@ -145,6 +170,17 @@ export class ProductsService {
             });
           }
         }
+        await tx.auditLog.create({
+          data: {
+            companyId,
+            actorId,
+            entityType: 'Product',
+            entityId: productId,
+            action: 'UPDATE',
+            before: this.toJson(this.auditShape(existing)),
+            after: this.toJson(input),
+          },
+        });
       });
     } catch (error) {
       if (this.isUniqueViolation(error)) {
@@ -152,6 +188,84 @@ export class ProductsService {
       }
       throw error;
     }
+  }
+
+  async setStatus(
+    companyId: string,
+    actorId: string,
+    productId: string,
+    active: boolean,
+  ): Promise<void> {
+    const existing = await this.prisma.product.findFirst({ where: { id: productId, companyId } });
+    if (!existing) throw new NotFoundException('Không tìm thấy sản phẩm');
+    if (!active) {
+      const balance = await this.prisma.stockBalance.aggregate({
+        where: { productId },
+        _sum: { quantity: true },
+      });
+      if ((balance._sum.quantity ?? 0) > 0) {
+        throw new BadRequestException(
+          'Sản phẩm còn tồn kho, hãy xử lý tồn trước khi ngừng sử dụng',
+        );
+      }
+    }
+    await this.prisma.$transaction([
+      this.prisma.product.update({ where: { id: productId }, data: { active } }),
+      this.prisma.auditLog.create({
+        data: {
+          companyId,
+          actorId,
+          entityType: 'Product',
+          entityId: productId,
+          action: active ? 'ACTIVATE' : 'DEACTIVATE',
+          before: this.toJson({ active: existing.active }),
+          after: this.toJson({ active }),
+        },
+      }),
+    ]);
+  }
+
+  async remove(companyId: string, actorId: string, productId: string): Promise<void> {
+    const existing = await this.prisma.product.findFirst({ where: { id: productId, companyId } });
+    if (!existing) throw new NotFoundException('Không tìm thấy sản phẩm');
+    const [balances, documentLines, ledgers, stocktakeLines, saleLines] =
+      await this.prisma.$transaction([
+        this.prisma.stockBalance.count({ where: { productId } }),
+        this.prisma.stockDocumentLine.count({ where: { productId } }),
+        this.prisma.stockLedger.count({ where: { productId } }),
+        this.prisma.stocktakeLine.count({ where: { productId } }),
+        this.prisma.saleLine.count({ where: { productId } }),
+      ]);
+    if (balances || documentLines || ledgers || stocktakeLines || saleLines) {
+      throw new ConflictException(
+        'Sản phẩm đã phát sinh tồn kho hoặc giao dịch; hãy dùng Ngừng sử dụng thay vì xóa',
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.product.delete({ where: { id: productId } });
+      await tx.auditLog.create({
+        data: {
+          companyId,
+          actorId,
+          entityType: 'Product',
+          entityId: productId,
+          action: 'DELETE',
+          before: this.toJson(this.auditShape(existing)),
+        },
+      });
+    });
+  }
+
+  private auditShape(product: {
+    sku: string;
+    name: string;
+    active: boolean;
+  }): Record<string, unknown> {
+    return { sku: product.sku, name: product.name, active: product.active };
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   }
 
   private isUniqueViolation(error: unknown): boolean {

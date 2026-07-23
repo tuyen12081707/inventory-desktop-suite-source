@@ -21,7 +21,6 @@ html,
 body,
 #root {
   width: 100%;
-  min-width: 1000px;
   min-height: 100%;
   margin: 0;
 }
@@ -538,6 +537,189 @@ body {
   font-size: 28px;
 }
 
+.password-form {
+  max-width: 480px;
+}
+
+.report-filter .ant-card-body {
+  padding-block: 14px;
+}
+
+.report-bars {
+  display: grid;
+  gap: 13px;
+  min-height: 260px;
+}
+
+.report-bar-row {
+  display: grid;
+  grid-template-columns: 54px minmax(80px, 1fr) minmax(110px, auto);
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.report-bar-track {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #eaf0f6;
+}
+
+.report-bar {
+  height: 100%;
+  min-width: 6px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0b3b6e, #2a77b9);
+}
+
+.receipt-page,
+.report-print-page {
+  min-height: 100vh;
+  padding: 28px;
+  background: #edf2f7;
+}
+
+.receipt-actions,
+.report-print-page > .no-print {
+  width: min(800px, 100%);
+  margin: 0 auto 16px;
+}
+
+.receipt-document,
+.report-document {
+  width: min(800px, 100%);
+  margin: 0 auto;
+  padding: 36px;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(16, 35, 61, 0.12);
+}
+
+.receipt-thermal_80 .receipt-document {
+  width: min(80mm, 100%);
+  padding: 8mm 5mm;
+}
+
+.receipt-header,
+.receipt-footer,
+.report-document header {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.receipt-header h3,
+.receipt-header h4,
+.report-document h2,
+.report-document h3 {
+  margin: 4px 0;
+}
+
+.receipt-logo {
+  width: 58px;
+  max-height: 58px;
+  margin: 0 auto 4px;
+  object-fit: contain;
+}
+
+.receipt-company-line {
+  font-size: 12px;
+}
+
+.receipt-meta {
+  display: grid;
+  gap: 4px;
+  margin: 18px 0;
+  font-size: 13px;
+}
+
+.receipt-table,
+.report-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.receipt-table th,
+.receipt-table td,
+.report-print-table th,
+.report-print-table td {
+  padding: 7px 4px;
+  border-bottom: 1px solid #dbe2ea;
+  text-align: right;
+  vertical-align: top;
+}
+
+.receipt-table th:first-child,
+.receipt-table td:first-child,
+.report-print-table th:nth-child(1),
+.report-print-table td:nth-child(1),
+.report-print-table th:nth-child(2),
+.report-print-table td:nth-child(2) {
+  text-align: left;
+}
+
+.receipt-table small {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+}
+
+.receipt-totals {
+  display: grid;
+  gap: 6px;
+  margin: 18px 0;
+}
+
+.receipt-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.receipt-grand-total {
+  margin-top: 5px;
+  padding-top: 8px;
+  border-top: 1px dashed #718096;
+  font-size: 16px;
+}
+
+.receipt-footer {
+  padding-top: 14px;
+  border-top: 1px solid #dbe2ea;
+  font-size: 13px;
+}
+
+.report-print-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 28px 0;
+}
+
+.report-print-kpis > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #dbe2ea;
+  border-radius: 6px;
+}
+
+.report-print-kpis strong {
+  font-size: 17px;
+}
+
+.report-document footer {
+  margin-top: 28px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.print-page-loading {
+  padding: 48px;
+}
+
 @media (max-width: 1280px) {
   .pos-page {
     grid-template-columns: minmax(0, 1fr) 370px;
@@ -557,7 +739,137 @@ body {
   }
 }
 
+@media (max-width: 767px) {
+  .app-header {
+    height: 60px;
+    padding: 0 14px;
+  }
+
+  .header-title {
+    max-width: 180px;
+    overflow: hidden;
+    font-size: 15px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-content {
+    padding: 16px 12px;
+  }
+
+  .page-stack {
+    gap: 16px !important;
+  }
+
+  .page-heading,
+  .pos-toolbar,
+  .catalog-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-heading > .ant-btn,
+  .pos-toolbar > .ant-select,
+  .print-current-page {
+    width: 100%;
+  }
+
+  .app-header .ant-space {
+    gap: 8px !important;
+  }
+
+  .user-menu > div,
+  .print-current-page,
+  .app-header .user-email {
+    display: none;
+  }
+
+  .form-grid,
+  .form-grid-3,
+  .customer-fields,
+  .summary-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .document-line {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  .line-remove-first {
+    margin-bottom: 0;
+  }
+
+  .pos-page {
+    display: block;
+    min-height: auto;
+    margin: -16px -12px;
+  }
+
+  .pos-catalog {
+    padding: 16px 12px 24px;
+  }
+
+  .pos-warehouse,
+  .pos-search {
+    width: 100%;
+  }
+
+  .scanner-card .ant-card-body {
+    flex-direction: column;
+  }
+
+  .pos-cart {
+    position: static;
+    height: auto;
+    min-height: 0;
+    border-top: 1px solid #dfe5ee;
+    border-left: 0;
+  }
+
+  .cart-lines {
+    max-height: 360px;
+  }
+
+  .receipt-page,
+  .report-print-page {
+    padding: 0;
+    background: #fff;
+  }
+
+  .receipt-actions,
+  .report-print-page > .no-print {
+    padding: 12px;
+  }
+
+  .receipt-document,
+  .report-document {
+    padding: 20px 14px;
+    box-shadow: none;
+  }
+
+  .report-bar-row {
+    grid-template-columns: 46px minmax(60px, 1fr);
+  }
+
+  .report-bar-row strong {
+    grid-column: 2;
+  }
+}
+
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
   .app-sider,
   .app-header,
   .page-heading button,
@@ -567,5 +879,31 @@ body {
 
   .app-content {
     padding: 0;
+  }
+
+  .no-print,
+  .receipt-actions {
+    display: none !important;
+  }
+
+  .receipt-page,
+  .report-print-page,
+  .receipt-document,
+  .report-document {
+    width: 100%;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .receipt-thermal_80 {
+    width: 80mm;
+  }
+
+  .receipt-table tr,
+  .report-print-table tr {
+    break-inside: avoid;
   }
 }

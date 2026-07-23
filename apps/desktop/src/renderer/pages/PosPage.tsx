@@ -40,7 +40,6 @@ import type {
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { api, ApiError } from '../lib/api';
 import { currencyFormat, numberFormat } from '../lib/format';
-import { desktop } from '../lib/platform';
 
 interface CartLine {
   product: PosCatalogItem;
@@ -70,6 +69,11 @@ export function PosPage(): React.JSX.Element {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
   const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
+
+  const openReceipt = (saleId: string, print = false): void => {
+    const origin = window.location.href.replace(/#.*/, '');
+    window.open(`${origin}#/receipt/${saleId}${print ? '?print=1' : ''}`, '_blank', 'noopener');
+  };
 
   const warehouses = useQuery({
     queryKey: ['warehouses'],
@@ -406,7 +410,8 @@ export function PosPage(): React.JSX.Element {
                     <InputNumber
                       min={1}
                       max={line.product.stockQuantity}
-                      precision={3}
+                      precision={0}
+                      step={1}
                       value={line.quantity}
                       controls={false}
                       onChange={(value) => updateQuantity(line.product.id, Number(value ?? 1))}
@@ -534,7 +539,7 @@ export function PosPage(): React.JSX.Element {
             key="print"
             type="primary"
             icon={<PrinterOutlined />}
-            onClick={() => void desktop.printCurrentWindow()}
+            onClick={() => receipt && openReceipt(receipt.id, true)}
           >
             In hóa đơn
           </Button>,

@@ -3,6 +3,7 @@ import {
   LoginSchema,
   LogoutSchema,
   RefreshSchema,
+  ChangePasswordSchema,
   type AuthResponse,
   type AuthUser,
 } from '@inventory/contracts';
@@ -14,6 +15,7 @@ import { AuthService } from './auth.service';
 
 type LoginInput = z.infer<typeof LoginSchema>;
 type RefreshInput = z.infer<typeof RefreshSchema>;
+type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 
 @Controller('auth')
 export class AuthController {
@@ -43,5 +45,14 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthUser): AuthUser {
     return user;
+  }
+
+  @HttpCode(204)
+  @Post('me/password')
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(ChangePasswordSchema)) input: ChangePasswordInput,
+  ): Promise<void> {
+    await this.authService.changePassword(user, input.currentPassword, input.newPassword);
   }
 }

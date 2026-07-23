@@ -17,6 +17,7 @@ if (configuredAdminPassword && configuredAdminPassword.length < 12) {
 const permissionDefinitions = [
   ['products.read', 'Xem sản phẩm'],
   ['products.write', 'Tạo và cập nhật sản phẩm'],
+  ['products.delete', 'Xóa sản phẩm chưa phát sinh giao dịch'],
   ['warehouses.read', 'Xem kho'],
   ['warehouses.write', 'Tạo và cập nhật kho'],
   ['inventory.read', 'Xem tồn kho và dashboard'],
@@ -26,6 +27,9 @@ const permissionDefinitions = [
   ['documents.post', 'Ghi sổ phiếu kho'],
   ['sales.read', 'Xem màn hình bán hàng và hóa đơn'],
   ['sales.checkout', 'Tạo hóa đơn và trừ tồn kho'],
+  ['reports.read', 'Xem báo cáo'],
+  ['reports.export', 'Xuất báo cáo'],
+  ['settings.manage', 'Quản lý cài đặt doanh nghiệp'],
 ] as const;
 
 async function main(): Promise<void> {

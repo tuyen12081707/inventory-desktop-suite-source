@@ -1,5 +1,5 @@
 export const numberFormat = new Intl.NumberFormat('vi-VN', {
-  maximumFractionDigits: 3,
+  maximumFractionDigits: 0,
 });
 
 export const currencyFormat = new Intl.NumberFormat('vi-VN', {
