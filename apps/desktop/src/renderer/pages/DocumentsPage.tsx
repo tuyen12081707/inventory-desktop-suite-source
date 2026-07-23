@@ -1,16 +1,23 @@
-import { CheckOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  EyeOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   App,
   Button,
   Card,
+  Descriptions,
+  Dropdown,
   Empty,
   Form,
   Input,
   InputNumber,
   Modal,
   Pagination,
-  Popconfirm,
   Select,
   Skeleton,
   Space,
@@ -24,6 +31,7 @@ import type {
   DocumentType,
   PageResult,
   ProductSummary,
+  StockDocumentDetail,
   StockDocumentSummary,
   WarehouseSummary,
 } from '@inventory/contracts';
@@ -69,9 +77,10 @@ interface DocumentFormValues {
 }
 
 export function DocumentsPage(): React.JSX.Element {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [form] = Form.useForm<DocumentFormValues>();
   const documentType = Form.useWatch('type', form);
@@ -79,6 +88,11 @@ export function DocumentsPage(): React.JSX.Element {
   const documents = useQuery({
     queryKey: ['documents'],
     queryFn: () => api<StockDocumentSummary[]>('/inventory/documents'),
+  });
+  const documentDetail = useQuery({
+    queryKey: ['document-detail', selectedDocumentId],
+    queryFn: () => api<StockDocumentDetail>(`/inventory/documents/${selectedDocumentId}`),
+    enabled: Boolean(selectedDocumentId),
   });
   const warehouses = useQuery({
     queryKey: ['warehouses'],
@@ -99,11 +113,18 @@ export function DocumentsPage(): React.JSX.Element {
   };
 
   const createDocument = useMutation({
-    mutationFn: (values: DocumentFormValues) =>
-      api<StockDocumentSummary>('/inventory/documents', {
+    mutationFn: (values: DocumentFormValues) => {
+      const payload = {
+        ...values,
+        destinationWarehouseId:
+          values.type === 'TRANSFER' ? values.destinationWarehouseId : undefined,
+        idempotencyKey: crypto.randomUUID(),
+      };
+      return api<StockDocumentSummary>('/inventory/documents', {
         method: 'POST',
-        body: JSON.stringify({ ...values, idempotencyKey: crypto.randomUUID() }),
-      }),
+        body: JSON.stringify(payload),
+      });
+    },
     onSuccess: async () => {
       message.success('Đã tạo phiếu nháp');
       setModalOpen(false);
@@ -145,33 +166,58 @@ export function DocumentsPage(): React.JSX.Element {
   const documentData = documents.data ?? [];
   const mobilePageData = documentData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const renderDocumentActions = (document: StockDocumentSummary): React.JSX.Element | null => {
-    if (document.status === 'DRAFT') {
-      return (
-        <Popconfirm
-          title="Duyệt phiếu này?"
-          description="Sau khi duyệt, phiếu sẵn sàng để ghi sổ."
-          onConfirm={() => approveDocument.mutate(document.id)}
-        >
-          <Button icon={<CheckOutlined />}>Duyệt phiếu</Button>
-        </Popconfirm>
-      );
-    }
-    if (document.status === 'APPROVED') {
-      return (
-        <Popconfirm
-          title="Ghi sổ tồn kho?"
-          description="Thao tác này cập nhật tồn và không thể sửa trực tiếp."
-          onConfirm={() => postDocument.mutate(document.id)}
-        >
-          <Button type="primary" icon={<SendOutlined />}>
-            Ghi sổ
-          </Button>
-        </Popconfirm>
-      );
-    }
-    return null;
+  const confirmApprove = (document: StockDocumentSummary): void => {
+    modal.confirm({
+      title: 'Duyệt phiếu này?',
+      content: 'Sau khi duyệt, phiếu sẵn sàng để ghi sổ.',
+      okText: 'Duyệt phiếu',
+      cancelText: 'Hủy',
+      onOk: () => approveDocument.mutateAsync(document.id),
+    });
   };
+
+  const confirmPost = (document: StockDocumentSummary): void => {
+    modal.confirm({
+      title: 'Ghi sổ tồn kho?',
+      content: 'Thao tác này cập nhật tồn và không thể sửa trực tiếp.',
+      okText: 'Ghi sổ',
+      cancelText: 'Hủy',
+      onOk: () => postDocument.mutateAsync(document.id),
+    });
+  };
+
+  const renderDocumentActions = (document: StockDocumentSummary): React.JSX.Element => {
+    const items = [
+      { key: 'view', icon: <EyeOutlined />, label: 'Xem chi tiết' },
+      ...(document.status === 'DRAFT'
+        ? [{ key: 'approve', icon: <CheckOutlined />, label: 'Duyệt phiếu' }]
+        : []),
+      ...(document.status === 'APPROVED'
+        ? [{ key: 'post', icon: <SendOutlined />, label: 'Ghi sổ' }]
+        : []),
+    ];
+    return (
+      <Dropdown
+        trigger={['click']}
+        placement="bottomRight"
+        menu={{
+          items,
+          onClick: ({ key }) => {
+            if (key === 'view') setSelectedDocumentId(document.id);
+            if (key === 'approve') confirmApprove(document);
+            if (key === 'post') confirmPost(document);
+          },
+        }}
+      >
+        <Button icon={<MoreOutlined />}>Thao tác</Button>
+      </Dropdown>
+    );
+  };
+
+  const warehouseDisplay = (document: StockDocumentSummary): string =>
+    document.type === 'TRANSFER' && document.destinationWarehouseName
+      ? `${document.warehouseName} → ${document.destinationWarehouseName}`
+      : document.warehouseName;
 
   return (
     <Space direction="vertical" size="large" className="page-stack">
@@ -179,7 +225,8 @@ export function DocumentsPage(): React.JSX.Element {
         <div>
           <Typography.Title level={2}>Phiếu kho</Typography.Title>
           <Typography.Text type="secondary">
-            Quy trình nháp → duyệt → ghi sổ; phiếu đã ghi sổ không thể sửa
+            Nhập, xuất, chuyển và điều chỉnh: nháp → duyệt → ghi sổ. Tồn ban đầu được tự tạo từ màn
+            Sản phẩm.
           </Typography.Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
@@ -192,44 +239,50 @@ export function DocumentsPage(): React.JSX.Element {
             rowKey="id"
             loading={documents.isLoading}
             dataSource={documentData}
-            scroll={{ x: 1100 }}
+            className="documents-table"
+            scroll={{ x: 905 }}
             pagination={{ pageSize: PAGE_SIZE }}
             columns={[
-              { title: 'Số phiếu', dataIndex: 'number', width: 210, fixed: 'left' },
+              { title: 'Số phiếu', dataIndex: 'number', width: 180 },
               {
                 title: 'Loại',
                 dataIndex: 'type',
-                width: 120,
+                width: 95,
                 render: (type: DocumentType) => typeLabels[type],
               },
-              { title: 'Kho nguồn', dataIndex: 'warehouseName', width: 180 },
               {
-                title: 'Kho đích',
-                dataIndex: 'destinationWarehouseName',
-                width: 180,
-                render: (value?: string) => value ?? '—',
+                title: 'Kho',
+                key: 'warehouse',
+                width: 190,
+                render: (_value: unknown, row: StockDocumentSummary) => warehouseDisplay(row),
               },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
-                width: 120,
+                width: 105,
                 render: (status: DocumentStatus) => (
                   <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>
                 ),
               },
-              { title: 'Số dòng', dataIndex: 'lineCount', align: 'right', width: 90 },
-              { title: 'Người tạo', dataIndex: 'createdByName', width: 170 },
+              { title: 'Số dòng', dataIndex: 'lineCount', align: 'right', width: 70 },
+              {
+                title: 'Người tạo',
+                dataIndex: 'createdByName',
+                width: 140,
+                responsive: ['xxl'],
+              },
               {
                 title: 'Ngày tạo',
                 dataIndex: 'createdAt',
-                width: 160,
+                width: 145,
                 render: (value: string) => dateTimeFormat.format(new Date(value)),
               },
               {
                 title: 'Thao tác',
                 key: 'actions',
                 fixed: 'right',
-                width: 170,
+                width: 120,
+                align: 'center',
                 render: (_value: unknown, row: StockDocumentSummary) => renderDocumentActions(row),
               },
             ]}
@@ -263,15 +316,9 @@ export function DocumentsPage(): React.JSX.Element {
 
                 <div className="mobile-document-route">
                   <div>
-                    <span>Kho nguồn</span>
-                    <strong>{document.warehouseName}</strong>
+                    <span>{document.type === 'TRANSFER' ? 'Luân chuyển kho' : 'Kho'}</span>
+                    <strong>{warehouseDisplay(document)}</strong>
                   </div>
-                  {document.destinationWarehouseName && (
-                    <div>
-                      <span>Kho đích</span>
-                      <strong>{document.destinationWarehouseName}</strong>
-                    </div>
-                  )}
                 </div>
 
                 <div className="mobile-list-metrics">
@@ -291,9 +338,7 @@ export function DocumentsPage(): React.JSX.Element {
                   </span>
                 </div>
 
-                {renderDocumentActions(document) && (
-                  <div className="mobile-document-actions">{renderDocumentActions(document)}</div>
-                )}
+                <div className="mobile-document-actions">{renderDocumentActions(document)}</div>
               </article>
             ))
           )}
@@ -339,14 +384,27 @@ export function DocumentsPage(): React.JSX.Element {
                 }))}
               />
             </Form.Item>
-            <Form.Item label="Kho nguồn" name="warehouseId" rules={[{ required: true }]}>
+            <Form.Item
+              label={documentType === 'TRANSFER' ? 'Kho xuất' : 'Kho'}
+              name="warehouseId"
+              rules={[{ required: true, message: 'Chọn kho' }]}
+            >
               <Select showSearch optionFilterProp="label" options={warehouseOptions} />
             </Form.Item>
             {documentType === 'TRANSFER' && (
               <Form.Item
-                label="Kho đích"
+                label="Kho nhận"
                 name="destinationWarehouseId"
-                rules={[{ required: true }]}
+                rules={[
+                  { required: true, message: 'Chọn kho nhận' },
+                  ({ getFieldValue }) => ({
+                    validator: async (_rule, value?: string) => {
+                      if (value && value === getFieldValue('warehouseId')) {
+                        throw new Error('Kho nhận phải khác kho xuất');
+                      }
+                    },
+                  }),
+                ]}
               >
                 <Select showSearch optionFilterProp="label" options={warehouseOptions} />
               </Form.Item>
@@ -407,6 +465,106 @@ export function DocumentsPage(): React.JSX.Element {
             )}
           </Form.List>
         </Form>
+      </Modal>
+
+      <Modal
+        title={
+          documentDetail.data ? `Chi tiết phiếu ${documentDetail.data.number}` : 'Chi tiết phiếu'
+        }
+        open={Boolean(selectedDocumentId)}
+        onCancel={() => setSelectedDocumentId(null)}
+        footer={[
+          <Button key="close" onClick={() => setSelectedDocumentId(null)}>
+            Đóng
+          </Button>,
+        ]}
+        width={820}
+        destroyOnHidden
+      >
+        {documentDetail.isLoading ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+        ) : documentDetail.isError || !documentDetail.data ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không thể tải chi tiết phiếu" />
+        ) : (
+          <Space direction="vertical" size="large" className="full-width">
+            <Descriptions
+              size="small"
+              bordered
+              column={{ xs: 1, sm: 2 }}
+              items={[
+                {
+                  key: 'type',
+                  label: 'Loại phiếu',
+                  children: typeLabels[documentDetail.data.type],
+                },
+                {
+                  key: 'status',
+                  label: 'Trạng thái',
+                  children: (
+                    <Tag color={statusColors[documentDetail.data.status]}>
+                      {statusLabels[documentDetail.data.status]}
+                    </Tag>
+                  ),
+                },
+                {
+                  key: 'warehouse',
+                  label: documentDetail.data.type === 'TRANSFER' ? 'Luân chuyển kho' : 'Kho',
+                  children: warehouseDisplay(documentDetail.data),
+                },
+                {
+                  key: 'created',
+                  label: 'Người tạo',
+                  children: documentDetail.data.createdByName,
+                },
+                {
+                  key: 'date',
+                  label: 'Ngày tạo',
+                  children: dateTimeFormat.format(new Date(documentDetail.data.createdAt)),
+                },
+                {
+                  key: 'reference',
+                  label: 'Tham chiếu',
+                  children: documentDetail.data.reference ?? '—',
+                },
+                {
+                  key: 'note',
+                  label: 'Ghi chú',
+                  span: 2,
+                  children: documentDetail.data.note ?? '—',
+                },
+              ]}
+            />
+            <div>
+              <Typography.Title level={5}>
+                Hàng hóa ({documentDetail.data.lineCount})
+              </Typography.Title>
+              <div className="document-detail-lines">
+                {documentDetail.data.lines.map((line) => (
+                  <div className="document-detail-line" key={line.id}>
+                    <div className="document-detail-product">
+                      <Typography.Text strong>{line.productName}</Typography.Text>
+                      <Typography.Text type="secondary">{line.sku}</Typography.Text>
+                    </div>
+                    <div>
+                      <span>Số lượng</span>
+                      <strong>
+                        {numberFormat.format(line.quantity)} {line.unit}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Đơn giá</span>
+                      <strong>{numberFormat.format(line.unitCost)} ₫</strong>
+                    </div>
+                    <div>
+                      <span>Thành tiền</span>
+                      <strong>{numberFormat.format(line.totalCost)} ₫</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Space>
+        )}
       </Modal>
     </Space>
   );

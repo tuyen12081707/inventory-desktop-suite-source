@@ -255,6 +255,22 @@ export interface StockDocumentSummary {
   postedAt?: string;
 }
 
+export interface StockDocumentDetail extends StockDocumentSummary {
+  note?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  lines: Array<{
+    id: string;
+    productId: string;
+    sku: string;
+    productName: string;
+    unit: string;
+    quantity: number;
+    unitCost: number;
+    totalCost: number;
+  }>;
+}
+
 export const PaymentMethodSchema = z.enum(['CASH', 'CARD', 'BANK_TRANSFER']);
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 
