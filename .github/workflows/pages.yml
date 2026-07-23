@@ -1,6 +1,9 @@
 name: Web App
 
 on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -14,14 +17,18 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    outputs:
-      pages_enabled: ${{ steps.pages.outcome == 'success' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Use Node.js 22
         uses: actions/setup-node@v6
@@ -41,19 +48,15 @@ jobs:
         run: npm run build:renderer -w @inventory/desktop
 
       - name: Configure GitHub Pages
-        id: pages
-        continue-on-error: true
         uses: actions/configure-pages@v6
 
       - name: Upload web artifact
-        if: ${{ steps.pages.outcome == 'success' }}
         uses: actions/upload-pages-artifact@v5
         with:
           path: apps/desktop/dist/renderer
 
   deploy:
     needs: build
-    if: needs.build.outputs.pages_enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:

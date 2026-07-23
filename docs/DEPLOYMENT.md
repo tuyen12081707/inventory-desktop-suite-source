@@ -4,18 +4,18 @@
 
 ```mermaid
 flowchart LR
-  U["Trình duyệt / Camera barcode"] -->|HTTPS| W["Render Static Site\nReact POS"]
+  U["Trình duyệt / Camera barcode"] -->|HTTPS| W["GitHub Pages\nReact POS"]
   D["Electron Desktop"] -->|HTTPS| A["Render Web Service\nNestJS API"]
   W -->|JWT + REST| A
   A -->|Private network| P["Render PostgreSQL 17"]
   A --> T["Stock transaction\nSale + ISSUE + Ledger + Balance"]
 ```
 
-Render Static Site phục vụ React POS, còn Web Service chạy NestJS và PostgreSQL lưu
-dữ liệu. Cả web và Electron gọi chung một API cloud, vì vậy số tồn luôn đến từ một
-nguồn dữ liệu.
+GitHub Pages phục vụ React POS, còn Render Web Service chạy NestJS và PostgreSQL
+lưu dữ liệu. Cả web và Electron gọi chung một API cloud, vì vậy số tồn luôn đến từ
+một nguồn dữ liệu.
 
-## 1. Tạo web, API và PostgreSQL trên Render
+## 1. Tạo API và PostgreSQL trên Render
 
 Repository có sẵn `render.yaml`. Mở:
 
@@ -25,8 +25,7 @@ Trong màn hình Blueprint:
 
 1. Kết nối tài khoản GitHub có quyền đọc repository.
 2. Nhập `SEED_ADMIN_PASSWORD` mạnh, tối thiểu 12 ký tự.
-3. Xác nhận tạo `inventory-pro-web-tuyen12081707`,
-   `inventory-pro-api-tuyen12081707` và PostgreSQL.
+3. Xác nhận tạo `inventory-pro-api-tuyen12081707` và PostgreSQL.
 4. Chờ health check `/api/v1/health` trả về `database: up`.
 
 Trên free tier, container tự chạy migration idempotent trước khi khởi động API và
@@ -46,25 +45,28 @@ https://inventory-pro-api-tuyen12081707.onrender.com/api/v1
 Nếu Render cấp hostname khác, tạo repository variable `VITE_API_URL` trong
 **Settings → Secrets and variables → Actions → Variables** với giá trị URL API đầy đủ.
 
-## 2. Mở web app
+## 2. Bật GitHub Pages
 
-Web mặc định được Blueprint deploy dưới dạng Render Static Site:
+Repository phải để public hoặc tài khoản GitHub phải hỗ trợ Pages cho private
+repository. Vào **Settings → Pages → Build and deployment**, chọn
+**Source: GitHub Actions**.
+
+Web mặc định:
 
 ```text
-https://inventory-pro-web-tuyen12081707.onrender.com
+https://tuyen12081707.github.io/inventory-desktop-suite-source/
 ```
 
-Render build React với API URL ở trên và tự deploy sau khi CI thành công.
-`HashRouter` cho phép mở và refresh các route như `#/pos` mà không cần rewrite.
-Workflow GitHub Pages chỉ còn chạy thủ công nếu sau này repository được chuyển sang
-public hoặc tài khoản được nâng cấp.
+Workflow `Web App` tự chạy sau khi CI trên `main` thành công, build React với API
+URL ở trên rồi deploy GitHub Pages. `HashRouter` cho phép mở và refresh các route
+như `#/pos` mà không cần rewrite.
 
 ## 3. CORS
 
 Production API chỉ chấp nhận các origin khai báo trong `CORS_ORIGINS`. Giá trị mẫu:
 
 ```text
-https://inventory-pro-web-tuyen12081707.onrender.com,http://localhost:5173,file://
+https://tuyen12081707.github.io,http://localhost:5173,file://
 ```
 
 Nếu đổi domain, cập nhật biến môi trường trên Render và redeploy.

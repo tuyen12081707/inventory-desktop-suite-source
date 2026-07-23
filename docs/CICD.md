@@ -16,8 +16,8 @@ flowchart LR
   C -- "Không" --> D["Chặn merge"]
   C -- "Có, merge main" --> E["Build API Docker image"]
   E --> F["Push GHCR: main, latest, sha-*"]
-  C -- "Có, merge main" --> I["Render Blueprint"]
-  I --> J["Deploy React Static Site + API"]
+  C -- "Có, merge main" --> I["Build React web"]
+  I --> J["Deploy GitHub Pages"]
   C -- "Có, push tag vX.Y.Z" --> G["Build Windows + macOS"]
   G --> H["GitHub Release + installer artifacts"]
 ```
@@ -29,8 +29,8 @@ flowchart LR
 | `ci.yml`              | Pull request và push vào `main`/`develop` | Kiểm tra chất lượng, migration, seed, test và build |
 | `backend-image.yml`   | Push `main`, tag hoặc chạy thủ công       | Push API image lên GitHub Container Registry        |
 | `release-desktop.yml` | Tag semantic version `vX.Y.Z`             | Build Windows/macOS và tạo GitHub Release           |
-| `pages.yml`           | Chạy thủ công                             | GitHub Pages dự phòng khi repository hỗ trợ Pages   |
-| `render.yaml`         | Render Blueprint sync sau khi CI xanh     | Deploy React Static Site, API và PostgreSQL         |
+| `pages.yml`           | Sau khi CI `main` xanh hoặc chạy thủ công | Build React POS và deploy GitHub Pages              |
+| `render.yaml`         | Render Blueprint sync sau khi CI xanh     | Deploy API và PostgreSQL                            |
 
 Các workflow dùng quyền tối thiểu: CI chỉ đọc source; container chỉ được ghi package;
 release chỉ được ghi nội dung release.

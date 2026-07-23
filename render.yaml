@@ -24,23 +24,11 @@ services:
       - key: REFRESH_TOKEN_TTL_DAYS
         value: '30'
       - key: CORS_ORIGINS
-        value: https://inventory-pro-web-tuyen12081707.onrender.com,https://tuyen12081707.github.io,http://localhost:5173,file://
+        value: https://tuyen12081707.github.io,http://localhost:5173,file://
       - key: SEED_ADMIN_EMAIL
         value: admin@company.local
       - key: SEED_ADMIN_PASSWORD
         sync: false
-
-  - type: web
-    name: inventory-pro-web-tuyen12081707
-    runtime: static
-    autoDeployTrigger: checksPass
-    buildCommand: npm ci && npm run build -w @inventory/contracts && npm run build:renderer -w @inventory/desktop
-    staticPublishPath: ./apps/desktop/dist/renderer
-    envVars:
-      - key: VITE_API_URL
-        value: https://inventory-pro-api-tuyen12081707.onrender.com/api/v1
-      - key: ELECTRON_SKIP_BINARY_DOWNLOAD
-        value: '1'
 
 databases:
   - name: inventory-pro-db-tuyen12081707
