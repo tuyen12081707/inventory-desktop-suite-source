@@ -15,12 +15,12 @@
     "make": "npm run build && electron-forge make"
   },
   "dependencies": {
-    "@ant-design/icons": "6.1.0",
+    "@ant-design/icons": "6.3.2",
     "@inventory/contracts": "*",
     "@tanstack/react-query": "5.101.4",
-    "@zxing/browser": "^0.1.5",
+    "@zxing/browser": "^0.2.1",
     "antd": "6.5.1",
-    "dayjs": "1.11.19",
+    "dayjs": "1.11.21",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-router-dom": "7.18.1"
