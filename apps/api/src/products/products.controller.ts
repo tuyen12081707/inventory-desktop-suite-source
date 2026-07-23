@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ProductCreateSchema,
   ProductUpdateSchema,
@@ -6,7 +6,7 @@ import {
   type PageResult,
   type ProductSummary,
 } from '@inventory/contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { RequirePermissions } from '../common/auth/permissions.decorator';
 import { ZodValidationPipe } from '../common/http/zod-validation.pipe';
@@ -14,6 +14,7 @@ import { ProductsService } from './products.service';
 
 type ProductCreateInput = z.infer<typeof ProductCreateSchema>;
 type ProductUpdateInput = z.infer<typeof ProductUpdateSchema>;
+const ProductStatusSchema = z.object({ active: z.boolean() });
 
 @Controller('products')
 export class ProductsController {
@@ -38,7 +39,7 @@ export class ProductsController {
     @CurrentUser() user: AuthUser,
     @Body(new ZodValidationPipe(ProductCreateSchema)) input: ProductCreateInput,
   ): Promise<ProductSummary> {
-    return this.productsService.create(user.companyId, input);
+    return this.productsService.create(user.companyId, user.id, input);
   }
 
   @RequirePermissions('products.write')
@@ -48,7 +49,25 @@ export class ProductsController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(ProductUpdateSchema)) input: ProductUpdateInput,
   ): Promise<{ success: true }> {
-    await this.productsService.update(user.companyId, id, input);
+    await this.productsService.update(user.companyId, user.id, id, input);
+    return { success: true };
+  }
+
+  @RequirePermissions('products.write')
+  @Patch(':id/status')
+  async setStatus(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(ProductStatusSchema)) input: z.infer<typeof ProductStatusSchema>,
+  ): Promise<{ success: true }> {
+    await this.productsService.setStatus(user.companyId, user.id, id, input.active);
+    return { success: true };
+  }
+
+  @RequirePermissions('products.delete')
+  @Delete(':id')
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<{ success: true }> {
+    await this.productsService.remove(user.companyId, user.id, id);
     return { success: true };
   }
 }

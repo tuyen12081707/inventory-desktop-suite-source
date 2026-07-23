@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { PaymentMethod, PosCatalogItem, SaleReceipt } from '@inventory/contracts';
+import type {
+  CompanySettings,
+  PaymentMethod,
+  PosCatalogItem,
+  SaleReceipt,
+} from '@inventory/contracts';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -25,6 +30,7 @@ interface CheckoutInput {
 }
 
 const saleReceiptInclude = {
+  company: true,
   warehouse: true,
   soldBy: true,
   lines: {
@@ -105,6 +111,15 @@ export class SalesService {
       take: 50,
     });
     return sales.map((sale) => this.toReceipt(sale));
+  }
+
+  async receipt(companyId: string, saleId: string): Promise<SaleReceipt> {
+    const sale = await this.prisma.sale.findFirst({
+      where: { id: saleId, companyId },
+      include: saleReceiptInclude,
+    });
+    if (!sale) throw new NotFoundException('Không tìm thấy hóa đơn');
+    return this.toReceipt(sale);
   }
 
   async checkout(companyId: string, actorId: string, input: CheckoutInput): Promise<SaleReceipt> {
@@ -305,9 +320,9 @@ export class SalesService {
     unit: string;
     category: string;
     salePrice: Prisma.Decimal;
-    reorderPoint: Prisma.Decimal;
+    reorderPoint: number;
     barcodes: Array<{ code: string }>;
-    balances: Array<{ quantity: Prisma.Decimal }>;
+    balances: Array<{ quantity: number }>;
   }): PosCatalogItem {
     return {
       id: product.id,
@@ -338,6 +353,7 @@ export class SalesService {
       paymentMethod: sale.paymentMethod,
       soldByName: sale.soldBy.fullName,
       soldAt: sale.soldAt.toISOString(),
+      company: this.toCompanySettings(sale.company),
       lines: sale.lines.map((line) => ({
         productId: line.productId,
         sku: line.product.sku,
@@ -347,6 +363,32 @@ export class SalesService {
         unitPrice: Number(line.unitPrice),
         lineTotal: Number(line.lineTotal),
       })),
+    };
+  }
+
+  private toCompanySettings(company: {
+    name: string;
+    logoKey: string | null;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    taxCode: string | null;
+    currencyCode: string;
+    defaultTaxRate: Prisma.Decimal;
+    receiptPaperSize: 'THERMAL_80' | 'A4';
+    receiptFooter: string | null;
+  }): CompanySettings {
+    return {
+      name: company.name,
+      logoKey: company.logoKey ?? undefined,
+      address: company.address ?? undefined,
+      phone: company.phone ?? undefined,
+      email: company.email ?? undefined,
+      taxCode: company.taxCode ?? undefined,
+      currencyCode: 'VND',
+      defaultTaxRate: Number(company.defaultTaxRate),
+      receiptPaperSize: company.receiptPaperSize,
+      receiptFooter: company.receiptFooter ?? undefined,
     };
   }
 

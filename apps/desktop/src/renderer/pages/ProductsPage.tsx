@@ -1,4 +1,10 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  PoweroffOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   App,
@@ -8,6 +14,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Space,
   Table,
   Tag,
@@ -34,6 +41,7 @@ export function ProductsPage(): React.JSX.Element {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductSummary | null>(null);
   const [page, setPage] = useState(1);
   const [form] = Form.useForm<ProductFormValues>();
 
@@ -61,6 +69,63 @@ export function ProductsPage(): React.JSX.Element {
       message.error(error instanceof ApiError ? error.message : 'Không thể tạo sản phẩm'),
   });
 
+  const updateProduct = useMutation({
+    mutationFn: (values: ProductFormValues) =>
+      api(`/products/${editingProduct?.id}`, { method: 'PATCH', body: JSON.stringify(values) }),
+    onSuccess: async () => {
+      message.success('Đã cập nhật sản phẩm');
+      setModalOpen(false);
+      setEditingProduct(null);
+      form.resetFields();
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) =>
+      message.error(error instanceof ApiError ? error.message : 'Không thể cập nhật sản phẩm'),
+  });
+
+  const changeStatus = useMutation({
+    mutationFn: ({ id, active }: Pick<ProductSummary, 'id' | 'active'>) =>
+      api(`/products/${id}/status`, { method: 'PATCH', body: JSON.stringify({ active }) }),
+    onSuccess: async () => {
+      message.success('Đã cập nhật trạng thái sản phẩm');
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await queryClient.invalidateQueries({ queryKey: ['pos-catalog'] });
+    },
+    onError: (error) =>
+      message.error(error instanceof ApiError ? error.message : 'Không thể đổi trạng thái'),
+  });
+
+  const deleteProduct = useMutation({
+    mutationFn: (id: string) => api(`/products/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      message.success('Đã xóa sản phẩm');
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) =>
+      message.error(error instanceof ApiError ? error.message : 'Không thể xóa sản phẩm'),
+  });
+
+  const openCreate = (): void => {
+    setEditingProduct(null);
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  const openEdit = (product: ProductSummary): void => {
+    setEditingProduct(product);
+    form.setFieldsValue({
+      sku: product.sku,
+      name: product.name,
+      unit: product.unit,
+      barcode: product.barcode,
+      reorderPoint: product.reorderPoint,
+      standardCost: product.standardCost,
+      salePrice: product.salePrice,
+      category: product.category,
+    });
+    setModalOpen(true);
+  };
+
   return (
     <Space direction="vertical" size="large" className="page-stack">
       <div className="page-heading">
@@ -68,7 +133,7 @@ export function ProductsPage(): React.JSX.Element {
           <Typography.Title level={2}>Sản phẩm</Typography.Title>
           <Typography.Text type="secondary">Quản lý SKU, barcode và ngưỡng tồn</Typography.Text>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           Thêm sản phẩm
         </Button>
       </div>
@@ -88,6 +153,7 @@ export function ProductsPage(): React.JSX.Element {
           rowKey="id"
           loading={products.isLoading}
           dataSource={products.data?.data}
+          scroll={{ x: 1180 }}
           pagination={{
             current: page,
             pageSize: 25,
@@ -108,6 +174,45 @@ export function ProductsPage(): React.JSX.Element {
                 <Space>
                   {numberFormat.format(value)}
                   {value <= row.reorderPoint && <Tag color="red">Sắp hết</Tag>}
+                </Space>
+              ),
+            },
+            {
+              title: 'Thao tác',
+              key: 'actions',
+              fixed: 'right',
+              width: 240,
+              render: (_value: unknown, row: ProductSummary) => (
+                <Space size="small">
+                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
+                    Sửa
+                  </Button>
+                  <Popconfirm
+                    title={row.active ? 'Ngừng sử dụng sản phẩm?' : 'Kích hoạt lại sản phẩm?'}
+                    description={
+                      row.active
+                        ? 'Sản phẩm còn tồn kho sẽ không thể ngừng sử dụng.'
+                        : 'Sản phẩm sẽ xuất hiện lại trong POS và phiếu kho.'
+                    }
+                    onConfirm={() => changeStatus.mutate({ id: row.id, active: !row.active })}
+                  >
+                    <Button size="small" icon={<PoweroffOutlined />}>
+                      {row.active ? 'Ngừng' : 'Dùng lại'}
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title="Xóa vĩnh viễn sản phẩm?"
+                    description="Chỉ xóa được sản phẩm chưa có phát sinh kho hoặc bán hàng."
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => deleteProduct.mutate(row.id)}
+                  >
+                    <Button
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      aria-label={`Xóa ${row.name}`}
+                    />
+                  </Popconfirm>
                 </Space>
               ),
             },
@@ -138,11 +243,15 @@ export function ProductsPage(): React.JSX.Element {
       </Card>
 
       <Modal
-        title="Thêm sản phẩm"
+        title={editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditingProduct(null);
+          form.resetFields();
+        }}
         onOk={() => form.submit()}
-        confirmLoading={createProduct.isPending}
+        confirmLoading={createProduct.isPending || updateProduct.isPending}
         destroyOnHidden
       >
         <Form<ProductFormValues>
@@ -155,7 +264,9 @@ export function ProductsPage(): React.JSX.Element {
             salePrice: 0,
             category: 'Khác',
           }}
-          onFinish={(values) => createProduct.mutate(values)}
+          onFinish={(values) =>
+            editingProduct ? updateProduct.mutate(values) : createProduct.mutate(values)
+          }
         >
           <div className="form-grid">
             <Form.Item
@@ -188,7 +299,7 @@ export function ProductsPage(): React.JSX.Element {
           </Form.Item>
           <div className="form-grid">
             <Form.Item label="Ngưỡng tồn" name="reorderPoint" rules={[{ required: true }]}>
-              <InputNumber min={0} precision={3} className="full-width" />
+              <InputNumber min={0} precision={0} step={1} className="full-width" />
             </Form.Item>
             <Form.Item label="Giá vốn chuẩn" name="standardCost" rules={[{ required: true }]}>
               <InputNumber min={0} precision={0} className="full-width" addonAfter="₫" />

@@ -23,6 +23,44 @@ export const RefreshSchema = z.object({
 
 export const LogoutSchema = RefreshSchema;
 
+export const ChangePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(8).max(128),
+    newPassword: z.string().min(12, 'Mật khẩu mới phải có ít nhất 12 ký tự').max(128),
+    confirmPassword: z.string().min(12).max(128),
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: 'Xác nhận mật khẩu mới không khớp',
+    path: ['confirmPassword'],
+  });
+
+export const CompanySettingsSchema = z.object({
+  name: z.string().trim().min(2).max(255),
+  logoKey: z.string().trim().url().max(500).optional().or(z.literal('')),
+  address: z.string().trim().max(500).optional(),
+  phone: z.string().trim().max(32).optional(),
+  email: z.string().trim().email().max(255).optional().or(z.literal('')),
+  taxCode: z.string().trim().max(64).optional(),
+  defaultTaxRate: z.coerce.number().min(0).max(100).default(0),
+  receiptPaperSize: z.enum(['THERMAL_80', 'A4']).default('THERMAL_80'),
+  receiptFooter: z.string().trim().max(500).optional(),
+});
+
+export type CompanySettingsInput = z.infer<typeof CompanySettingsSchema>;
+
+export interface CompanySettings {
+  name: string;
+  logoKey?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  taxCode?: string;
+  currencyCode: 'VND';
+  defaultTaxRate: number;
+  receiptPaperSize: 'THERMAL_80' | 'A4';
+  receiptFooter?: string;
+}
+
 export const ProductCreateSchema = z.object({
   sku: z
     .string()
@@ -33,7 +71,7 @@ export const ProductCreateSchema = z.object({
   name: z.string().trim().min(2).max(255),
   unit: z.string().trim().min(1).max(32).default('cái'),
   barcode: z.string().trim().min(4).max(64).optional(),
-  reorderPoint: z.coerce.number().min(0).default(0),
+  reorderPoint: z.coerce.number().int('Ngưỡng tồn phải là số nguyên').min(0).default(0),
   standardCost: z.coerce.number().min(0).default(0),
   salePrice: z.coerce.number().min(0).default(0),
   category: z.string().trim().min(1).max(100).default('Khác'),
@@ -54,7 +92,10 @@ export const WarehouseCreateSchema = z.object({
 
 const StockLineSchema = z.object({
   productId: z.uuid(),
-  quantity: z.coerce.number().refine((value) => value !== 0, 'Số lượng phải khác 0'),
+  quantity: z.coerce
+    .number()
+    .int('Số lượng phải là số nguyên')
+    .refine((value) => value !== 0, 'Số lượng phải khác 0'),
   unitCost: z.coerce.number().min(0).default(0),
 });
 
@@ -192,7 +233,7 @@ export const SaleCheckoutSchema = z.object({
     .array(
       z.object({
         productId: z.uuid(),
-        quantity: z.coerce.number().positive().max(99999),
+        quantity: z.coerce.number().int('Số lượng phải là số nguyên').positive().max(99999),
       }),
     )
     .min(1)
@@ -226,6 +267,7 @@ export interface SaleReceipt {
   paymentMethod: PaymentMethod;
   soldByName: string;
   soldAt: string;
+  company: CompanySettings;
   lines: Array<{
     productId: string;
     sku: string;
@@ -234,5 +276,35 @@ export interface SaleReceipt {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+  }>;
+}
+
+export interface ReportOverview {
+  companyName: string;
+  from: string;
+  to: string;
+  revenue: number;
+  discount: number;
+  taxAmount: number;
+  grossProfit: number;
+  invoiceCount: number;
+  inventoryValue: number;
+  lowStockProducts: number;
+  revenueSeries: Array<{ date: string; revenue: number; invoices: number }>;
+  topProducts: Array<{
+    productId: string;
+    sku: string;
+    name: string;
+    quantity: number;
+    revenue: number;
+    grossProfit: number;
+  }>;
+  lowStock: Array<{
+    productId: string;
+    sku: string;
+    name: string;
+    quantity: number;
+    reorderPoint: number;
+    unit: string;
   }>;
 }

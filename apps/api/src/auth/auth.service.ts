@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
-import { compare } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import type { AuthResponse, AuthUser } from '@inventory/contracts';
 import type { Prisma, User } from '@prisma/client';
@@ -75,6 +75,41 @@ export class AuthService {
       where: { tokenHash: this.hashToken(refreshToken), revokedAt: null },
       data: { revokedAt: new Date() },
     });
+  }
+
+  async changePassword(
+    user: AuthUser,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const existing = await this.prisma.user.findFirst({
+      where: { id: user.id, companyId: user.companyId, status: 'ACTIVE' },
+    });
+    if (!existing || !(await compare(currentPassword, existing.passwordHash))) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không chính xác');
+    }
+    if (await compare(newPassword, existing.passwordHash)) {
+      throw new UnauthorizedException('Mật khẩu mới phải khác mật khẩu hiện tại');
+    }
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: existing.id },
+        data: { passwordHash: await hash(newPassword, 12) },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: existing.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          companyId: user.companyId,
+          actorId: existing.id,
+          entityType: 'User',
+          entityId: existing.id,
+          action: 'CHANGE_PASSWORD',
+        },
+      }),
+    ]);
   }
 
   private async issueSession(user: UserWithPermissions): Promise<AuthResponse> {

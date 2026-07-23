@@ -5,6 +5,8 @@ import {
   FileTextOutlined,
   LogoutOutlined,
   PrinterOutlined,
+  BarChartOutlined,
+  SettingOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
@@ -22,6 +24,8 @@ const menuItems = [
   { key: '/inventory', icon: <DatabaseOutlined />, label: 'Tồn kho' },
   { key: '/documents', icon: <FileTextOutlined />, label: 'Phiếu kho' },
   { key: '/warehouses', icon: <ShopOutlined />, label: 'Kho hàng' },
+  { key: '/reports', icon: <BarChartOutlined />, label: 'Báo cáo' },
+  { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt' },
 ];
 
 export function AppShell(): React.JSX.Element {
@@ -38,7 +42,7 @@ export function AppShell(): React.JSX.Element {
   return (
     <Layout className="app-layout">
       {contextHolder}
-      <Sider width={236} className="app-sider" theme="light">
+      <Sider width={236} breakpoint="lg" collapsedWidth={0} className="app-sider" theme="light">
         <div className="brand">
           <div className="brand-mark">IP</div>
           <div>
@@ -61,8 +65,8 @@ export function AppShell(): React.JSX.Element {
             Hệ thống quản lý kho
           </Typography.Title>
           <Space size="middle">
-            <Button icon={<PrinterOutlined />} onClick={print}>
-              In màn hình
+            <Button className="print-current-page" icon={<PrinterOutlined />} onClick={print}>
+              In trang hiện tại
             </Button>
             <Dropdown
               menu={{

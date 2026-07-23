@@ -292,8 +292,9 @@ export function DocumentsPage(): React.JSX.Element {
                       rules={[{ required: true }]}
                     >
                       <InputNumber
-                        precision={3}
-                        min={documentType === 'ADJUSTMENT' ? undefined : 0.001}
+                        precision={0}
+                        step={1}
+                        min={documentType === 'ADJUSTMENT' ? undefined : 1}
                       />
                     </Form.Item>
                     <Form.Item

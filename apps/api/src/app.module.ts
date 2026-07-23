@@ -8,6 +8,8 @@ import { HealthController } from './health/health.controller';
 import { InventoryModule } from './inventory/inventory.module';
 import { ProductsModule } from './products/products.module';
 import { SalesModule } from './sales/sales.module';
+import { SettingsModule } from './settings/settings.module';
+import { ReportsModule } from './reports/reports.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
 
 @Module({
@@ -18,6 +20,8 @@ import { WarehousesModule } from './warehouses/warehouses.module';
     WarehousesModule,
     InventoryModule,
     SalesModule,
+    SettingsModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [

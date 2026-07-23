@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
   SaleCheckoutSchema,
   type AuthUser,
@@ -44,6 +44,12 @@ export class SalesController {
     @Query('warehouseId') warehouseId?: string,
   ): Promise<SaleReceipt[]> {
     return this.salesService.recent(user.companyId, warehouseId);
+  }
+
+  @RequirePermissions('sales.read')
+  @Get(':id/receipt')
+  receipt(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<SaleReceipt> {
+    return this.salesService.receipt(user.companyId, id);
   }
 
   @RequirePermissions('sales.checkout')

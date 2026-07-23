@@ -46,10 +46,24 @@ enum PaymentMethod {
   BANK_TRANSFER
 }
 
+enum ReceiptPaperSize {
+  THERMAL_80
+  A4
+}
+
 model Company {
   id         String           @id @default(uuid()) @db.Uuid
   code       String           @unique @db.VarChar(32)
   name       String           @db.VarChar(255)
+  logoKey    String?          @db.VarChar(500)
+  address    String?          @db.VarChar(500)
+  phone      String?          @db.VarChar(32)
+  email      String?          @db.VarChar(255)
+  taxCode    String?          @db.VarChar(64)
+  currencyCode String         @default("VND") @db.VarChar(3)
+  defaultTaxRate Decimal      @default(0) @db.Decimal(5, 2)
+  receiptPaperSize ReceiptPaperSize @default(THERMAL_80)
+  receiptFooter String?       @db.VarChar(500)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
   users      User[]
@@ -162,7 +176,7 @@ model Product {
   sku            String              @db.VarChar(64)
   name           String              @db.VarChar(255)
   unit           String              @default("cái") @db.VarChar(32)
-  reorderPoint   Decimal             @default(0) @db.Decimal(18, 3)
+  reorderPoint   Int                 @default(0)
   standardCost   Decimal             @default(0) @db.Decimal(18, 4)
   salePrice      Decimal             @default(0) @db.Decimal(18, 2)
   category       String              @default("Khác") @db.VarChar(100)
@@ -198,7 +212,7 @@ model StockBalance {
   id          String    @id @default(uuid()) @db.Uuid
   warehouseId String    @db.Uuid
   productId   String    @db.Uuid
-  quantity    Decimal   @default(0) @db.Decimal(18, 3)
+  quantity    Int       @default(0)
   averageCost Decimal   @default(0) @db.Decimal(18, 4)
   version     Int       @default(0)
   updatedAt   DateTime  @updatedAt
@@ -247,7 +261,7 @@ model StockDocumentLine {
   id         String        @id @default(uuid()) @db.Uuid
   documentId String        @db.Uuid
   productId  String        @db.Uuid
-  quantity   Decimal       @db.Decimal(18, 3)
+  quantity   Int
   unitCost   Decimal       @default(0) @db.Decimal(18, 4)
   document   StockDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   product    Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -264,9 +278,9 @@ model StockLedger {
   documentLineId String            @db.Uuid
   warehouseId    String            @db.Uuid
   productId      String            @db.Uuid
-  quantityDelta  Decimal           @db.Decimal(18, 3)
+  quantityDelta  Int
   unitCost       Decimal           @default(0) @db.Decimal(18, 4)
-  balanceAfter   Decimal           @db.Decimal(18, 3)
+  balanceAfter   Int
   occurredAt     DateTime          @default(now())
   company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
   document       StockDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
@@ -305,8 +319,8 @@ model StocktakeLine {
   id          String    @id @default(uuid()) @db.Uuid
   stocktakeId String    @db.Uuid
   productId   String    @db.Uuid
-  expectedQty Decimal   @db.Decimal(18, 3)
-  countedQty  Decimal?  @db.Decimal(18, 3)
+  expectedQty Int
+  countedQty  Int?
   stocktake   Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
   product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
 
@@ -347,7 +361,7 @@ model SaleLine {
   id        String  @id @default(uuid()) @db.Uuid
   saleId    String  @db.Uuid
   productId String  @db.Uuid
-  quantity  Decimal @db.Decimal(18, 3)
+  quantity  Int
   unitPrice Decimal @db.Decimal(18, 2)
   lineTotal Decimal @db.Decimal(18, 2)
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
