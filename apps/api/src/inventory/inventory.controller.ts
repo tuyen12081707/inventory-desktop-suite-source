@@ -3,6 +3,7 @@ import {
   StockDocumentCreateSchema,
   type AuthUser,
   type DashboardSummary,
+  type StockDocumentDetail,
   type StockDocumentSummary,
 } from '@inventory/contracts';
 import type { z } from 'zod';
@@ -36,6 +37,12 @@ export class InventoryController {
   @Get('documents')
   documents(@CurrentUser() user: AuthUser): Promise<StockDocumentSummary[]> {
     return this.inventoryService.listDocuments(user.companyId);
+  }
+
+  @RequirePermissions('documents.read')
+  @Get('documents/:id')
+  document(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<StockDocumentDetail> {
+    return this.inventoryService.getDocument(user.companyId, id);
   }
 
   @RequirePermissions('documents.write')

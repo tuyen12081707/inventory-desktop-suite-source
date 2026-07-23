@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { DashboardSummary, DocumentType, StockDocumentSummary } from '@inventory/contracts';
+import type {
+  DashboardSummary,
+  DocumentType,
+  StockDocumentDetail,
+  StockDocumentSummary,
+} from '@inventory/contracts';
 import { Prisma, type StockDocument } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -158,6 +163,45 @@ export class InventoryService {
     return documents.map((document) => this.toDocumentSummary(document));
   }
 
+  async getDocument(companyId: string, documentId: string): Promise<StockDocumentDetail> {
+    const document = await this.prisma.stockDocument.findFirst({
+      where: { id: documentId, companyId },
+      include: {
+        warehouse: true,
+        destinationWarehouse: true,
+        createdBy: true,
+        approvedBy: true,
+        lines: {
+          include: { product: true },
+          orderBy: { product: { name: 'asc' } },
+        },
+        _count: { select: { lines: true } },
+      },
+    });
+    if (!document) throw new NotFoundException('Không tìm thấy phiếu kho');
+
+    return {
+      ...this.toDocumentSummary(document),
+      note: document.note ?? undefined,
+      approvedByName: document.approvedBy?.fullName,
+      approvedAt: document.approvedAt?.toISOString(),
+      lines: document.lines.map((line) => {
+        const quantity = Number(line.quantity);
+        const unitCost = Number(line.unitCost);
+        return {
+          id: line.id,
+          productId: line.productId,
+          sku: line.product.sku,
+          productName: line.product.name,
+          unit: line.product.unit,
+          quantity,
+          unitCost,
+          totalCost: quantity * unitCost,
+        };
+      }),
+    };
+  }
+
   async createDocument(
     companyId: string,
     actorId: string,
@@ -205,7 +249,8 @@ export class InventoryService {
           number: this.generateDocumentNumber(input.type),
           type: input.type,
           warehouseId: input.warehouseId,
-          destinationWarehouseId: input.destinationWarehouseId,
+          destinationWarehouseId:
+            input.type === 'TRANSFER' ? input.destinationWarehouseId : undefined,
           reference: input.reference,
           note: input.note,
           idempotencyKey: input.idempotencyKey,
