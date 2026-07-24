@@ -36,6 +36,7 @@ const toolLabels: Record<string, string> = {
 function cleanAssistantText(content: string): string {
   return content
     .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
     .replace(/^\s*[-*]\s+/gm, '• ')
     .replace(/^#{1,6}\s+/gm, '')
     .trim();
