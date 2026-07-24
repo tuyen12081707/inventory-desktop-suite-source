@@ -18,6 +18,8 @@ services:
           property: connectionString
       - key: JWT_ACCESS_SECRET
         generateValue: true
+      - key: AI_SECRETS_ENCRYPTION_KEY
+        generateValue: true
       - key: JWT_ACCESS_TTL
         value: 15m
       - key: REFRESH_TOKEN_TTL_DAYS

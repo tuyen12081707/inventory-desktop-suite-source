@@ -27,6 +27,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { desktop } from '../lib/platform';
+import { AiAssistant } from './AiAssistant';
 
 const { Header, Sider, Content } = Layout;
 
@@ -154,6 +155,7 @@ export function AppShell(): React.JSX.Element {
         <Content className="app-content">
           <Outlet />
         </Content>
+        <AiAssistant />
       </Layout>
     </Layout>
   );
