@@ -33,6 +33,14 @@ const toolLabels: Record<string, string> = {
   get_app_guide: 'Hướng dẫn app',
 };
 
+function cleanAssistantText(content: string): string {
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/^#{1,6}\s+/gm, '')
+    .trim();
+}
+
 export function AiAssistant(): React.JSX.Element | null {
   const { user } = useAuth();
   const screens = Grid.useBreakpoint();
@@ -54,7 +62,7 @@ export function AiAssistant(): React.JSX.Element | null {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: response.answer,
+          content: cleanAssistantText(response.answer),
           toolsUsed: response.toolsUsed,
         },
       ]);
