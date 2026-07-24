@@ -153,13 +153,15 @@ export class AssistantService {
     const runtime = await this.config.getRuntimeConfig(companyId);
     const response = await this.gemini.generate(runtime.model, runtime.apiKeys, {
       contents: [{ role: 'user', parts: [{ text: 'Chỉ trả lời đúng một từ: OK' }] }],
-      generationConfig: { maxOutputTokens: 16 },
+      generationConfig: { maxOutputTokens: 128 },
     });
-    const answer = response.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? '')
-      .join('')
-      .trim();
-    if (!answer) throw new BadGatewayException('Gemini không trả về kết quả kiểm tra');
+    if (!response.candidates?.[0]) {
+      throw new BadGatewayException(
+        response.promptFeedback?.blockReason
+          ? 'Gemini đã chặn nội dung kiểm tra kết nối'
+          : 'Gemini không trả về kết quả kiểm tra',
+      );
+    }
     await this.config.markVerified(companyId);
     return { success: true, model: runtime.model };
   }
