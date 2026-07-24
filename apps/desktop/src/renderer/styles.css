@@ -719,9 +719,174 @@ body {
   right: 24px;
   bottom: 24px;
   z-index: 900;
-  height: 46px;
-  padding-inline: 18px;
-  box-shadow: 0 10px 28px rgba(11, 59, 110, 0.28);
+  display: grid;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  filter: drop-shadow(0 10px 18px rgba(11, 59, 110, 0.24));
+  transition: filter 160ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ai-assistant-launcher:active {
+  cursor: grabbing;
+}
+
+.ai-assistant-launcher:hover,
+.ai-assistant-launcher:focus-visible {
+  filter: drop-shadow(0 13px 22px rgba(11, 59, 110, 0.34));
+  outline: none;
+}
+
+.ai-assistant-launcher:focus-visible .ai-pet-body {
+  box-shadow:
+    0 0 0 4px rgba(96, 165, 250, 0.48),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+}
+
+.ai-pet-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-self: center;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.68);
+  border-radius: 48% 48% 44% 44%;
+  background: linear-gradient(145deg, #4ea8ed 0%, #155da3 58%, #0c3971 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(7, 34, 72, 0.35),
+    inset 0 -9px 14px rgba(4, 31, 69, 0.24);
+  animation: ai-pet-float 2.8s ease-in-out infinite;
+}
+
+.ai-pet-body > .anticon {
+  position: relative;
+  z-index: 1;
+  font-size: 31px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.ai-pet-antenna {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 3px;
+  height: 13px;
+  border-radius: 8px;
+  background: #8dd5ff;
+  transform: translateX(-50%);
+}
+
+.ai-pet-antenna::after {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9f3ff;
+  box-shadow: 0 0 10px #71c9ff;
+  content: '';
+  transform: translateX(-50%);
+}
+
+.ai-pet-eyes {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  width: 29px;
+  height: 8px;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 6px 4px, #e9fbff 0 3px, transparent 3.5px),
+    radial-gradient(circle at 23px 4px, #e9fbff 0 3px, transparent 3.5px);
+  filter: drop-shadow(0 0 3px rgba(216, 248, 255, 0.95));
+  transform: translateX(-50%);
+  animation: ai-pet-blink 5s ease-in-out infinite;
+}
+
+.ai-pet-orbit {
+  position: absolute;
+  inset: 1px;
+  border: 1px solid rgba(96, 187, 247, 0.45);
+  border-radius: 50%;
+  animation: ai-pet-orbit 5s linear infinite;
+}
+
+.ai-pet-orbit::after {
+  position: absolute;
+  top: 6px;
+  left: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b9ebff;
+  box-shadow: 0 0 8px #7bd0ff;
+  content: '';
+}
+
+.ai-pet-label {
+  position: absolute;
+  right: 3px;
+  bottom: -22px;
+  left: 3px;
+  overflow: hidden;
+  padding: 3px 5px;
+  border-radius: 8px;
+  color: #16477b;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 3px 10px rgba(21, 54, 91, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes ai-pet-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(2deg);
+  }
+}
+
+@keyframes ai-pet-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ai-pet-blink {
+  0%,
+  44%,
+  48%,
+  100% {
+    transform: translateX(-50%) scaleY(1);
+  }
+  46% {
+    transform: translateX(-50%) scaleY(0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-pet-body,
+  .ai-pet-orbit,
+  .ai-pet-eyes {
+    animation: none;
+  }
 }
 
 .ai-assistant-drawer .ant-drawer-body {
@@ -1466,7 +1631,25 @@ body {
   .ai-assistant-launcher {
     right: 14px;
     bottom: 14px;
-    height: 44px;
+    width: 64px;
+    height: 64px;
+  }
+
+  .ai-pet-body {
+    width: 50px;
+    height: 50px;
+  }
+
+  .ai-pet-body > .anticon {
+    font-size: 27px;
+  }
+
+  .ai-pet-eyes {
+    top: 21px;
+  }
+
+  .ai-pet-label {
+    display: none;
   }
 
   .ai-chat-messages {
