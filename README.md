@@ -63,6 +63,12 @@ npm run make -w @inventory/desktop
 JWT_ACCESS_SECRET="replace-with-a-long-random-secret" docker compose up -d --build
 ```
 
+## Trợ lý kho AI
+
+Chatbot Gemini được cấu hình tại **Cài đặt → Trợ lý kho AI**. API key được mã hóa ở backend và
+không đưa vào source/frontend. Xem kiến trúc, cơ chế tối đa 20 key dự phòng và hướng dẫn vận hành
+tại [docs/AI-ASSISTANT.md](docs/AI-ASSISTANT.md).
+
 ## Đóng gói desktop
 
 Chạy lệnh `make` trên đúng hệ điều hành đích. Với Windows, Electron Forge sinh bộ cài

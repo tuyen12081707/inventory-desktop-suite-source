@@ -11,6 +11,7 @@ import { SalesModule } from './sales/sales.module';
 import { SettingsModule } from './settings/settings.module';
 import { ReportsModule } from './reports/reports.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
+import { AssistantModule } from './assistant/assistant.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { WarehousesModule } from './warehouses/warehouses.module';
     SalesModule,
     SettingsModule,
     ReportsModule,
+    AssistantModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -12,6 +12,7 @@ const EnvSchema = z.object({
     .min(1)
     .default('postgresql://inventory:inventory@localhost:5432/inventory?schema=public'),
   JWT_ACCESS_SECRET: z.string().min(32).default('development-only-secret-change-me-now'),
+  AI_SECRETS_ENCRYPTION_KEY: z.string().min(32).optional(),
   JWT_ACCESS_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   CORS_ORIGINS: z.string().default('http://localhost:5173,file://'),

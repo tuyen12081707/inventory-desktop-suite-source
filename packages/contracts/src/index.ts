@@ -76,6 +76,52 @@ export interface CompanySettings {
   receiptFooter?: string;
 }
 
+export const AiSettingsUpdateSchema = z.object({
+  enabled: z.boolean(),
+  model: z
+    .string()
+    .trim()
+    .min(3)
+    .max(100)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'Tên model Gemini không hợp lệ'),
+  apiKeys: z
+    .array(z.string().trim().min(20, 'API key quá ngắn').max(512, 'API key quá dài'))
+    .max(20, 'Chỉ hỗ trợ tối đa 20 API key')
+    .optional(),
+});
+
+export interface AiSettings {
+  provider: 'GEMINI';
+  enabled: boolean;
+  model: string;
+  keyCount: number;
+  maskedKeys: string[];
+  lastVerifiedAt?: string;
+}
+
+export const AiChatRequestSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().trim().min(1).max(4000),
+      }),
+    )
+    .min(1)
+    .max(20)
+    .refine((messages) => messages.at(-1)?.role === 'user', {
+      message: 'Tin nhắn cuối cùng phải từ người dùng',
+    }),
+});
+
+export type AiChatRequest = z.infer<typeof AiChatRequestSchema>;
+
+export interface AiChatResponse {
+  answer: string;
+  model: string;
+  toolsUsed: string[];
+}
+
 const ProductBaseSchema = z.object({
   sku: z
     .string()

@@ -2,6 +2,8 @@ import {
   CameraOutlined,
   DeleteOutlined,
   LockOutlined,
+  PlusOutlined,
+  RobotOutlined,
   SaveOutlined,
   SettingOutlined,
   UploadOutlined,
@@ -9,6 +11,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   App,
+  Alert,
   Button,
   Card,
   Form,
@@ -17,17 +20,25 @@ import {
   InputNumber,
   Select,
   Space,
+  Switch,
+  Tag,
   Typography,
   Upload,
 } from 'antd';
 import { useEffect, useState } from 'react';
-import type { CompanySettings } from '@inventory/contracts';
+import type { AiSettings, CompanySettings } from '@inventory/contracts';
 import { api, ApiError } from '../lib/api';
 
 interface PasswordValues {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+interface AiFormValues {
+  enabled: boolean;
+  model: string;
+  apiKeys: Array<{ value?: string }>;
 }
 
 const SUPPORTED_LOGO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -97,17 +108,33 @@ export function SettingsPage(): React.JSX.Element {
   const queryClient = useQueryClient();
   const [companyForm] = Form.useForm<CompanySettings>();
   const [passwordForm] = Form.useForm<PasswordValues>();
+  const [aiForm] = Form.useForm<AiFormValues>();
   const [logoProcessing, setLogoProcessing] = useState(false);
+  const [replaceAiKeys, setReplaceAiKeys] = useState(false);
   const logoUrl = Form.useWatch('logoKey', companyForm);
   const uploadedLogo = logoUrl?.startsWith('data:image/');
   const company = useQuery({
     queryKey: ['company-settings'],
     queryFn: () => api<CompanySettings>('/settings/company'),
   });
+  const aiSettings = useQuery({
+    queryKey: ['ai-settings'],
+    queryFn: () => api<AiSettings>('/settings/ai'),
+  });
 
   useEffect(() => {
     if (company.data) companyForm.setFieldsValue(company.data);
   }, [company.data, companyForm]);
+
+  useEffect(() => {
+    if (!aiSettings.data) return;
+    aiForm.setFieldsValue({
+      enabled: aiSettings.data.enabled,
+      model: aiSettings.data.model,
+      apiKeys: [{ value: '' }],
+    });
+    setReplaceAiKeys(aiSettings.data.keyCount === 0);
+  }, [aiForm, aiSettings.data]);
 
   const saveCompany = useMutation({
     mutationFn: (values: CompanySettings) =>
@@ -132,6 +159,45 @@ export function SettingsPage(): React.JSX.Element {
       message.error(error instanceof ApiError ? error.message : 'Không thể đổi mật khẩu'),
   });
 
+  const saveAiSettings = useMutation({
+    mutationFn: (values: AiFormValues) => {
+      const apiKeys = replaceAiKeys
+        ? values.apiKeys.map((entry) => entry.value?.trim() ?? '').filter(Boolean)
+        : undefined;
+      return api<AiSettings>('/settings/ai', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          enabled: values.enabled,
+          model: values.model,
+          ...(apiKeys !== undefined ? { apiKeys } : {}),
+        }),
+      });
+    },
+    onSuccess: async (settings) => {
+      aiForm.setFieldsValue({
+        enabled: settings.enabled,
+        model: settings.model,
+        apiKeys: [{ value: '' }],
+      });
+      setReplaceAiKeys(settings.keyCount === 0);
+      await queryClient.invalidateQueries({ queryKey: ['ai-settings'] });
+      message.success('Đã lưu cấu hình chatbot AI');
+    },
+    onError: (error) =>
+      message.error(error instanceof ApiError ? error.message : 'Không thể lưu cấu hình AI'),
+  });
+
+  const testAiSettings = useMutation({
+    mutationFn: () =>
+      api<{ success: true; model: string }>('/settings/ai/test', { method: 'POST' }),
+    onSuccess: async ({ model }) => {
+      await queryClient.invalidateQueries({ queryKey: ['ai-settings'] });
+      message.success(`Kết nối Gemini thành công với ${model}`);
+    },
+    onError: (error) =>
+      message.error(error instanceof ApiError ? error.message : 'Không thể kết nối Gemini'),
+  });
+
   const handleLogoFile = async (file: File): Promise<void> => {
     setLogoProcessing(true);
     try {
@@ -147,7 +213,7 @@ export function SettingsPage(): React.JSX.Element {
   };
 
   return (
-    <Space direction="vertical" size="large" className="page-stack">
+    <Space orientation="vertical" size="large" className="page-stack">
       <div className="page-heading">
         <div>
           <Typography.Title level={2}>Cài đặt</Typography.Title>
@@ -308,6 +374,149 @@ export function SettingsPage(): React.JSX.Element {
             Lưu cài đặt
           </Button>
         </Form>
+      </Card>
+      <Card
+        title={
+          <Space>
+            <RobotOutlined />
+            Trợ lý kho AI
+          </Space>
+        }
+        loading={aiSettings.isLoading}
+      >
+        <Space orientation="vertical" size="middle" className="full-width">
+          <Alert
+            type="info"
+            showIcon
+            title="API key chỉ được gửi tới backend, mã hóa trước khi lưu và không xuất hiện lại trên trình duyệt."
+            description="Hỗ trợ tối đa 20 key dự phòng. Hạn mức Gemini tính theo Google Cloud project, vì vậy nhiều key cùng project vẫn dùng chung quota."
+          />
+          {aiSettings.data && (
+            <div className="ai-key-summary">
+              <div>
+                <Typography.Text strong>
+                  Đã lưu {aiSettings.data.keyCount}/20 API key
+                </Typography.Text>
+                {aiSettings.data.lastVerifiedAt && (
+                  <Typography.Text type="secondary">
+                    Kiểm tra gần nhất:{' '}
+                    {new Intl.DateTimeFormat('vi-VN', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    }).format(new Date(aiSettings.data.lastVerifiedAt))}
+                  </Typography.Text>
+                )}
+              </div>
+              <Space size={[6, 6]} wrap>
+                {aiSettings.data.maskedKeys.map((maskedKey, index) => (
+                  <Tag key={`${maskedKey}-${index}`}>{maskedKey}</Tag>
+                ))}
+              </Space>
+            </div>
+          )}
+          <Form<AiFormValues>
+            form={aiForm}
+            layout="vertical"
+            initialValues={{
+              enabled: false,
+              model: 'gemini-3.6-flash',
+              apiKeys: [{ value: '' }],
+            }}
+            onFinish={(values) => saveAiSettings.mutate(values)}
+          >
+            <div className="form-grid">
+              <Form.Item label="Bật chatbot" name="enabled" valuePropName="checked">
+                <Switch checkedChildren="Đang bật" unCheckedChildren="Đang tắt" />
+              </Form.Item>
+              <Form.Item
+                label="Model Gemini"
+                name="model"
+                rules={[
+                  { required: true, message: 'Nhập tên model' },
+                  {
+                    pattern: /^[a-zA-Z0-9._-]+$/,
+                    message: 'Tên model chỉ gồm chữ, số, dấu chấm, gạch ngang hoặc gạch dưới',
+                  },
+                ]}
+                extra="Nên dùng model stable. Mặc định hiện tại: gemini-3.6-flash."
+              >
+                <Input placeholder="gemini-3.6-flash" />
+              </Form.Item>
+            </div>
+
+            <div className="ai-key-replace-heading">
+              <div>
+                <Typography.Text strong>Thay danh sách API key</Typography.Text>
+                <Typography.Text type="secondary">
+                  Tắt tùy chọn này để giữ nguyên các key đang lưu trên server.
+                </Typography.Text>
+              </div>
+              <Switch checked={replaceAiKeys} onChange={setReplaceAiKeys} />
+            </div>
+
+            {replaceAiKeys && (
+              <Form.List name="apiKeys">
+                {(fields, { add, remove }) => (
+                  <Space orientation="vertical" className="full-width" size="small">
+                    {fields.map((field, index) => (
+                      <div className="ai-key-row" key={field.key}>
+                        <Form.Item
+                          name={[field.name, 'value']}
+                          label={`API key ${index + 1}`}
+                          rules={[
+                            {
+                              validator: async (_rule, value?: string) => {
+                                if (!value?.trim() || value.trim().length >= 20) return;
+                                throw new Error('API key phải có ít nhất 20 ký tự');
+                              },
+                            },
+                          ]}
+                        >
+                          <Input.Password
+                            autoComplete="new-password"
+                            placeholder="Dán API key Gemini"
+                          />
+                        </Form.Item>
+                        <Button
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label={`Xóa API key ${index + 1}`}
+                          onClick={() => remove(field.name)}
+                        />
+                      </div>
+                    ))}
+                    <Button
+                      icon={<PlusOutlined />}
+                      disabled={fields.length >= 20}
+                      onClick={() => add({ value: '' })}
+                    >
+                      Thêm key dự phòng ({fields.length}/20)
+                    </Button>
+                  </Space>
+                )}
+              </Form.List>
+            )}
+
+            <Space wrap className="settings-form-actions">
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                htmlType="submit"
+                loading={saveAiSettings.isPending}
+              >
+                Lưu cấu hình AI
+              </Button>
+              <Button
+                icon={<RobotOutlined />}
+                disabled={!aiSettings.data?.enabled || aiSettings.data.keyCount === 0}
+                loading={testAiSettings.isPending}
+                onClick={() => testAiSettings.mutate()}
+              >
+                Kiểm tra kết nối
+              </Button>
+            </Space>
+          </Form>
+        </Space>
       </Card>
       <Card
         title={

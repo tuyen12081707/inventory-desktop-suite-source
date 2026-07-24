@@ -52,30 +52,45 @@ enum ReceiptPaperSize {
 }
 
 model Company {
-  id         String           @id @default(uuid()) @db.Uuid
-  code       String           @unique @db.VarChar(32)
-  name       String           @db.VarChar(255)
-  logoKey    String?          @db.Text
-  address    String?          @db.VarChar(500)
-  phone      String?          @db.VarChar(32)
-  email      String?          @db.VarChar(255)
-  taxCode    String?          @db.VarChar(64)
-  currencyCode String         @default("VND") @db.VarChar(3)
-  defaultTaxRate Decimal      @default(0) @db.Decimal(5, 2)
-  receiptPaperSize ReceiptPaperSize @default(THERMAL_80)
-  receiptFooter String?       @db.VarChar(500)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  users      User[]
-  roles      Role[]
-  warehouses Warehouse[]
-  products   Product[]
-  barcodes   ProductBarcode[]
-  documents  StockDocument[]
-  ledgers    StockLedger[]
-  stocktakes Stocktake[]
-  sales      Sale[]
-  auditLogs  AuditLog[]
+  id                String             @id @default(uuid()) @db.Uuid
+  code              String             @unique @db.VarChar(32)
+  name              String             @db.VarChar(255)
+  logoKey           String?            @db.Text
+  address           String?            @db.VarChar(500)
+  phone             String?            @db.VarChar(32)
+  email             String?            @db.VarChar(255)
+  taxCode           String?            @db.VarChar(64)
+  currencyCode      String             @default("VND") @db.VarChar(3)
+  defaultTaxRate    Decimal            @default(0) @db.Decimal(5, 2)
+  receiptPaperSize  ReceiptPaperSize   @default(THERMAL_80)
+  receiptFooter     String?            @db.VarChar(500)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  users             User[]
+  roles             Role[]
+  warehouses        Warehouse[]
+  products          Product[]
+  barcodes          ProductBarcode[]
+  documents         StockDocument[]
+  ledgers           StockLedger[]
+  stocktakes        Stocktake[]
+  sales             Sale[]
+  auditLogs         AuditLog[]
+  aiAssistantConfig AiAssistantConfig?
+}
+
+model AiAssistantConfig {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @unique @db.Uuid
+  provider         String    @default("GEMINI") @db.VarChar(32)
+  model            String    @default("gemini-3.6-flash") @db.VarChar(100)
+  enabled          Boolean   @default(false)
+  encryptedApiKeys String?   @db.Text
+  keyCount         Int       @default(0)
+  lastVerifiedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model User {

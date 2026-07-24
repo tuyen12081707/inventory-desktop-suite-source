@@ -30,6 +30,7 @@ const permissionDefinitions = [
   ['reports.read', 'Xem báo cáo'],
   ['reports.export', 'Xuất báo cáo'],
   ['settings.manage', 'Quản lý cài đặt doanh nghiệp'],
+  ['assistant.use', 'Sử dụng trợ lý kho AI'],
 ] as const;
 
 async function main(): Promise<void> {
