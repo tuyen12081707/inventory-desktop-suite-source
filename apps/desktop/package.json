@@ -26,20 +26,20 @@
     "react-router-dom": "7.18.1"
   },
   "devDependencies": {
-    "@electron-forge/cli": "7.11.2",
-    "@electron-forge/maker-squirrel": "7.11.2",
-    "@electron-forge/maker-zip": "7.11.2",
-    "@types/node": "24.10.1",
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-squirrel": "8.0.1",
+    "@electron-forge/maker-zip": "8.0.1",
+    "@types/node": "26.6.3",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.1",
-    "concurrently": "9.2.1",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "10.0.5",
     "cross-env": "10.1.0",
-    "electron": "43.2.0",
+    "electron": "44.5.1",
     "electron-squirrel-startup": "1.0.1",
     "tsup": "8.5.1",
-    "typescript": "5.9.3",
-    "vite": "7.3.6",
-    "wait-on": "9.0.3"
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "wait-on": "9.5.1"
   }
 }
